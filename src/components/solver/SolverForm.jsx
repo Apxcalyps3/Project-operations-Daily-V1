@@ -52,35 +52,6 @@ const SolverForm = ({
       : availableMethods[0];
   });
 
-  // Quick test function for debugging
-  const runQuickTest = () => {
-    console.log('=== QUICK DEBUG TEST ===');
-    
-    // Test a simple problem: Max Z = 3X1 + 2X2 s.t. X1 + X2 <= 4, 2X1 + X2 <= 5
-    const testProblem = {
-      isMax: true,
-      objective: ['3', '2'],
-      constraints: [
-        { coefficients: ['1', '1'], relation: '<=', rhs: '4' },
-        { coefficients: ['2', '1'], relation: '<=', rhs: '5' }
-      ]
-    };
-    
-    console.log('Test Problem:', testProblem);
-    
-    // Set the form to this problem
-    setIsMax(true);
-    setNumVars(2);
-    setObjective(['3', '2']);
-    setConstraints([
-      { coefficients: ['1', '1'], relation: '<=', rhs: '4' },
-      { coefficients: ['2', '1'], relation: '<=', rhs: '5' }
-    ]);
-    setMethod('BIG M');
-    
-    console.log('Form set to test problem');
-  };
-
   // Automatically update method if it becomes invalid under current mode
   useEffect(() => {
     if (!availableMethods.includes(method)) {
@@ -109,27 +80,18 @@ const SolverForm = ({
   const adjustVarCount = (delta) => {
     const next = numVars + delta;
     if (next < 2 || next > 10) return;
-    
-    console.log(`=== SOLVER DEBUG: Variable count changing from ${numVars} to ${next} ===`);
-    
+
     setNumVars(next);
     setObjective((prev) => {
       const arr = [...prev];
       while (arr.length < next) arr.push('');
-      const newArr = arr.slice(0, next);
-      console.log(`=== SOLVER DEBUG: Objective array length ${prev.length} -> ${newArr.length} ===`);
-      return newArr;
+      return arr.slice(0, next);
     });
-    setConstraints((prev) => {
-      const updated = prev.map((c, idx) => {
-        const coeffs = [...c.coefficients];
-        while (coeffs.length < next) coeffs.push('');
-        const newCoeffs = coeffs.slice(0, next);
-        console.log(`=== SOLVER DEBUG: Constraint ${idx} coefficients length ${c.coefficients.length} -> ${newCoeffs.length} ===`);
-        return { ...c, coefficients: newCoeffs };
-      });
-      return updated;
-    });
+    setConstraints((prev) => prev.map((c) => {
+      const coeffs = [...c.coefficients];
+      while (coeffs.length < next) coeffs.push('');
+      return { ...c, coefficients: coeffs.slice(0, next) };
+    }));
   };
 
   /* ── Objective ── */
@@ -157,7 +119,6 @@ const SolverForm = ({
     });
 
   const addConstraint = () => {
-    console.log(`=== SOLVER DEBUG: Adding constraint. Current count: ${constraints.length} ===`);
     setConstraints((prev) => [
       ...prev,
       { coefficients: new Array(numVars).fill(''), relation: '<=', rhs: '' },
@@ -165,11 +126,7 @@ const SolverForm = ({
   };
 
   const removeConstraint = (idx) => {
-    if (constraints.length <= 1) {
-      console.log(`=== SOLVER DEBUG: Cannot remove constraint - minimum reached ===`);
-      return;
-    }
-    console.log(`=== SOLVER DEBUG: Removing constraint ${idx}. Current count: ${constraints.length} ===`);
+    if (constraints.length <= 1) return;
     setConstraints((prev) => prev.filter((_, i) => i !== idx));
   };
 
@@ -201,14 +158,6 @@ const SolverForm = ({
     e.preventDefault();
     setError(null);
     setResults(null);
-
-    console.log('=== SOLVER DEBUG: Starting Analysis ===');
-    console.log('Solver Type:', solverType);
-    console.log('Method:', method);
-    console.log('Variables:', numVars);
-    console.log('Maximize:', isMax);
-    console.log('Objective:', objective);
-    console.log('Constraints:', constraints);
 
     // Enhanced validation with specific error messages
     const validationErrors = [];
@@ -244,33 +193,23 @@ const SolverForm = ({
     });
 
     if (validationErrors.length > 0) {
-      const errorMsg = validationErrors.join('; ');
-      console.error('=== SOLVER DEBUG: Validation Failed ===', errorMsg);
-      setError(errorMsg);
+      setError(validationErrors.join('; '));
       return;
     }
-
-    console.log('=== SOLVER DEBUG: Validation Passed ===');
 
     try {
       let result;
       if (solverType === 'IP') {
         if (method === 'BRANCH & BOUND' || method === 'BRANCH AND BOUND') {
-          console.log('=== SOLVER DEBUG: Calling Branch & Bound ===');
           result = solveBranchAndBound({ isMax, objective, constraints });
         } else {
-          console.log('=== SOLVER DEBUG: Calling Cutting Plane ===');
           result = solveCuttingPlane({ isMax, objective, constraints });
         }
       } else {
-        console.log(`=== SOLVER DEBUG: Calling Simplex Engine for ${method} ===`);
         result = solveSimplex({ method, isMax, objective, constraints });
       }
 
-      console.log('=== SOLVER DEBUG: Solver Result ===', result);
-
       if (result.error) {
-        console.error('=== SOLVER DEBUG: Solver Error ===', result.error);
         setError(result.error);
         return;
       }
@@ -289,10 +228,7 @@ const SolverForm = ({
         results: result,
         model: modelSnapshot,
       });
-      
-      console.log('=== SOLVER DEBUG: Analysis Complete ===');
     } catch (err) {
-      console.error('=== SOLVER DEBUG: Exception Caught ===', err);
       setError(String(err));
     }
   };
@@ -537,21 +473,6 @@ const SolverForm = ({
           className="run-analysis-btn"
         >
           RUN ANALYSIS
-        </button>
-        <button
-          type="button"
-          onClick={runQuickTest}
-          style={{
-            padding: '8px 16px',
-            fontSize: '0.85rem',
-            backgroundColor: '#333',
-            color: '#4ade80',
-            border: '1px solid #4ade80',
-            cursor: 'pointer',
-            fontFamily: 'monospace'
-          }}
-        >
-          🧪 QUICK TEST
         </button>
       </div>
 
