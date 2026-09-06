@@ -1,0 +1,80 @@
+# OPERATIONS DAILY – MASTER PROJECT SPECIFICATIONS (FINAL REVISION)
+
+## 1. CORE IDENTITY & VISUAL DESIGN
+- Project Name: Operations Daily
+- Theme: High-Contrast Retro Green / Cyberpunk.
+- Color Palette: Primary Neon (#4ade80), Dark Background (#000000), Grid Lines (#14532d).
+- Font: Monospace / Courier New.
+- Global Centering: Every page must wrap its content in a container that ensures 100% horizontal and vertical centering using Flexbox. No content should float to the top-left.
+- Perspective Background: bg-grid.png must be applied to a fixed .perspective-grid element with a 3D transform. Opacity must be high (1.0) and vibrant.
+- Global Header: The logo-main.png must be at the top of every page and act as a functional Link to the home page (/).
+
+## 2. NAVIGATION FLOW (FLOWCHART PAGE 18 COMPLIANCE)
+1. Home Page (/): Display 4 Horizontal Buttons (Solver, Challenge, History, Settings).
+2. Solver Selection (/solver): Display 2 Horizontal Buttons (LP Solver, IP Solver).
+3. LP Solver Page (/solver/lp): The Linear Programming input interface.
+4. IP Solver Page (/solver/ip): The Integer Programming input interface.
+5. History Selection (/history): 2 Horizontal Buttons (Solver History, Challenge History).
+6. Settings Page (/settings): 3 Horizontal Buttons (Account, Theme, Review).
+
+## 3. MANUAL SOLVER LOGIC & MATH ENGINE
+### A. Available Methods (Per Flowchart)
+The "Method" dropdown should display the following options regardless of whether the problem is MAXIMIZE or MINIMIZE:
+- LP Solver Methods: DUAL SIMPLEX, BIG M, PRIMAL-DUAL.
+- IP Solver Methods: CUTTING PLANE, BRANCH & BOUND.
+
+### B. Input Dynamics & Structural Constraints
+- Variable Control: + and - buttons update numVars. UI must re-render X_n input boxes for the Objective Function and every Subjective Constraint row immediately.
+- Subjective Constraints: The user-definable matrix allows for an unlimited/variable number of rows added by the user.
+- Structural Constraints (Hardcoded & Visible):
+    * Non-Negativity: X_n >= 0 must be displayed automatically at the bottom of the constraint list inside the bracket for all solvers.
+    * Integer Constraint: For IP models, X_n ∈ ℤ must be hardcoded and displayed below the subjective constraints.
+
+### C. Detailed Output Requirements (Reference: emathhelp.net & atozmath.com)
+The solver must provide a full educational breakdown equivalent to professional academic calculators.
+- Step-by-Step Iterations: Return an array of "Step" objects. Each step must be viewable using "Next/Prev" buttons.
+- Complete Tableaus: Every iteration must display a full Simplex Tableau with headers (Basis, Variables, Cj-Zj row, RHS, Ratios). Highlight the pivot row and pivot column clearly.
+- Row Operations: For every iteration, explicitly state the row operations performed to reach the next state (e.g., "R2(new) = R2(old) - (value) * R1(pivot)").
+- Explanations: Provide a text summary for each step identifying the entering variable (optimality test), the leaving variable (minimum ratio), and the rationale for the current pivot.
+- Feasibility & Optimality: Clearly state if the solution is Feasible, Infeasible, Unbounded, or Optimal.
+
+### D. Graphical Visualization (2D Models)
+For models with 2 variables, provide a graphical representation:
+- Aesthetic: Monochromatic Green theme. Use different shades of #4ade80 for lines and markers.
+- Interaction: The graph must be fully zoomable (scroll wheel/pinch) and scrollable (click-and-drag panning).
+- Feasible Region: Dynamically calculate and shade the feasible region (the area satisfying all constraints) with a semi-transparent green glow.
+- Optimal Solution: Clearly mark the optimal coordinate point and the objective function line (Iso-profit/Iso-cost line).
+
+## 4. DAILY CHALLENGE ENGINE
+- Backend Generation Logic: Every 24 hours, generate a unique model using the current date string (YYYY-MM-DD) as a seed. 
+- Randomized Parameters: The generator must produce a randomized combination of 2 to 4 variables and 2 to 4 Subjective Constraints. (Note: This 2-4 limit is for generation only; do not explicitly state this limitation in the Web UI).
+- Structural Constraints: Hardcoded Non-Negativity (and Integer for IP) constraints must be present in the model and math.
+- UI Bracket Fix: The curly bracket "{" prefixing the constraints must scale height-wise to encompass all Subjective Constraints PLUS the hardcoded structural ones.
+- Timer: A real-time countdown showing time remaining until the next real-world Midnight (local IRL time).
+- Validation: Compare user input to the optimal result. Return: "Optimal", "Feasible but not Optimal", or "Infeasible".
+
+## 5. FIREBASE INTEGRATION & ACCOUNTS
+- System: Use Firebase Authentication (Email/Password) and Firestore Database.
+- Account Persistence: Use onAuthStateChanged. Refreshing the browser must NOT log the user out.
+- Admin Superuser Account:
+    * Email: project.operations.daily@gmail.com
+    * Password: OperationsDaily2026
+    * Logic: This account grants immediate system access for testing purposes.
+- User Data: Store all Solver and Challenge results in Firestore under users/{uid}/history.
+
+## 6. HISTORY & PERSISTENCE
+### A. Solver History
+- List previous manual calculations fetched from Firebase. Clicking an entry must re-populate the solver with that model and its full step-by-step tableaus.
+
+### B. Challenge History (The Calendar)
+- Navigation: Interactive calendar with Month and Year selection dropdowns/arrows.
+- Date Markers: 
+    * Highlighted: Current date.
+    * Checkmark (✓): Challenges solved by the user.
+    * Cross (X): Missed challenges (past dates with no solved record).
+- Inspection: Clicking a date retrieves the archived problem and solution for that day.
+
+## 7. SETTINGS & ASSETS
+- Theme: Default is Dark Mode. Light Mode button triggers a "COMING SOON" transmission overlay as per PDF Page 13.
+- Review: Clicking "Review" triggers a modal/window showing the Feedback QR code (icon-feedback.png).
+- Icons: Use PNG assets from src/assets/icons/ only. Do not use generic CSS boxes or emojis.

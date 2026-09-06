@@ -1,0 +1,6 @@
+{
+  "name": "Operations Daily",
+  "description": "Simplex and operations research solver with daily challenges, LP and IP solvers, and interactive step-by-step solutions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
