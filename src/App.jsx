@@ -8,6 +8,7 @@ import IPSolverPage from './pages/IPSolverPage';
 import DailyChallengePage from './pages/DailyChallengePage';
 import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
+import TestPage from './pages/TestPage';
 
 import logoMain from './assets/logo-main.png';
 import { ThemeProvider } from './context/ThemeContext';
@@ -43,6 +44,7 @@ function App() {
               <Route path="/challenge" element={<DailyChallengePage />} />
               <Route path="/history" element={<HistoryPage />} />
               <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/test" element={<TestPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>

@@ -7,11 +7,15 @@
 import { Fraction, toFraction, formatRowOp } from './fractionUtils.js';
 
 export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
+  console.log('=== BIG-M ENGINE: Starting ===');
+  console.log('Parameters:', { isMax, objective, constraints });
+  
   const steps = [];
   const numVars = objective.length;
   const numConstraints = constraints.length;
 
   if (numVars === 0 || numConstraints === 0) {
+    console.error('=== BIG-M ENGINE: Invalid input ===');
     return { error: 'Please provide valid objective and constraints.' };
   }
 
@@ -22,6 +26,12 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
   );
   const b = constraints.map((row) => toFraction(row.rhs ?? 0));
   const rels = constraints.map((row) => row.relation || '<=');
+  
+  console.log('=== BIG-M ENGINE: Parsed coefficients ===');
+  console.log('Objective (c):', c.map(f => f.toDisplayString()));
+  console.log('Constraint matrix (A):', A.map(row => row.map(f => f.toDisplayString())));
+  console.log('RHS (b):', b.map(f => f.toDisplayString()));
+  console.log('Relations:', rels);
 
   // Normalize negative RHS (multiply row by -1 and invert relation)
   for (let i = 0; i < numConstraints; i++) {

@@ -7,8 +7,8 @@ import CountdownTimer from '../components/challenge/CountdownTimer';
 
 import iconDailyLP from '../assets/icons/icon-dailylp.png';
 import iconDailyIP from '../assets/icons/icon-dailyip.png';
-import { DAILY_LP_MODEL, DAILY_IP_MODEL, markChallengeAsSolved } from '../services/api';
-import { solveBigM } from '../services/bigMEngine';
+import { getDailyLPModel, getDailyIPModel, markChallengeAsSolved } from '../services/api';
+import { solveSimplex } from '../services/simplexEngine';
 import { solveCuttingPlane } from '../services/cuttingPlaneEngine';
 
 const todayKey = () => {
@@ -19,11 +19,12 @@ const todayKey = () => {
 const DailyChallengePage = () => {
   const [selectedChallenge, setSelectedChallenge] = useState(null); // 'LP' or 'IP'
 
-  const activeModel = selectedChallenge === 'LP' ? DAILY_LP_MODEL : selectedChallenge === 'IP' ? DAILY_IP_MODEL : null;
+  const dateStr = todayKey();
+  const activeModel = selectedChallenge === 'LP' ? getDailyLPModel(dateStr) : selectedChallenge === 'IP' ? getDailyIPModel(dateStr) : null;
 
   const verifyChallenge = (submission) => {
-    const solver = selectedChallenge === 'IP' ? solveCuttingPlane : solveBigM;
-    const solution = solver({ isMax: activeModel.isMax, objective: activeModel.rawObjective, constraints: activeModel.constraints });
+    const solver = selectedChallenge === 'IP' ? solveCuttingPlane : solveSimplex;
+    const solution = solver({ method: 'BIG M', isMax: activeModel.isMax, objective: activeModel.rawObjective, constraints: activeModel.constraints });
     const matchesZ = Math.abs(submission.z - solution.optimalZ) < 0.001;
     const matchesVariables = submission.vars.every((value, index) => Math.abs(value - solution.variables[`X${index + 1}`]) < 0.001);
     if (!matchesZ || !matchesVariables) return { success: false, message: 'INCORRECT. CHECK YOUR OBJECTIVE VALUE AND VARIABLE VALUES.' };

@@ -11,25 +11,33 @@ const AuthModal = ({ onClose }) => {
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!username.trim()) {
-      setMsg('Please provide a username.');
+      setMsg('Please provide an email/username.');
       return;
     }
     if (password.length < 4) {
       setMsg('ACCESS CODE MUST HAVE AT LEAST 4 CHARACTERS.');
       return;
     }
-    const result = mode === 'signup' ? signup(username, password) : login(username, password);
-    if (!result.ok) {
-      setMsg(result.message);
-      return;
+    
+    setMsg('AUTHENTICATING...');
+    
+    try {
+      if (mode === 'signup') {
+        await signup(username, password, username.split('@')[0]);
+      } else {
+        await login(username, password);
+      }
+      setMsg(`WELCOME, ${username.trim()}!`);
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      setMsg(err.message || 'AUTHENTICATION FAILED.');
     }
-    setMsg(`WELCOME, ${username.trim()}!`);
-    setTimeout(() => {
-      onClose && onClose();
-    }, 1000);
   };
 
   if (user) {

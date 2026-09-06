@@ -37,6 +37,28 @@ const HomePage = () => {
         onClick={() => navigate('/settings')}
         altText="Settings"
       />
+      {/* Temporary test link for debugging */}
+      <div style={{ 
+        position: 'fixed', 
+        bottom: '10px', 
+        right: '10px',
+        zIndex: 1000 
+      }}>
+        <button
+          onClick={() => navigate('/test')}
+          style={{
+            padding: '8px 16px',
+            fontSize: '12px',
+            backgroundColor: '#4ade80',
+            color: '#000',
+            border: 'none',
+            cursor: 'pointer',
+            fontFamily: 'monospace'
+          }}
+        >
+          🔧 Run Tests
+        </button>
+      </div>
     </div>
   );
 };

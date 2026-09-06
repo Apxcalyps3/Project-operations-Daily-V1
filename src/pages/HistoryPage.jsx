@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Window from '../components/layout/Window';
 import Navbar from '../components/layout/Navbar';
-import { getSolveHistory, DAILY_LP_MODEL, DAILY_IP_MODEL } from '../services/api';
+import { getSolveHistory, getDailyLPModel, getDailyIPModel } from '../services/api';
 
 import iconSolverH from '../assets/icons/icon-solverh.png';
 import iconChallengeH from '../assets/icons/icon-challengeh.png';
@@ -19,7 +19,7 @@ const MONTHS = [
 
 const DAY_NAMES = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-const CalendarSection = ({ title, storageKey, assignedModel }) => {
+const CalendarSection = ({ title, storageKey, type }) => {
   const now = new Date();
   const [month, setMonth] = useState(now.getMonth());    // 0-indexed
   const [year, setYear]   = useState(now.getFullYear());
@@ -60,7 +60,8 @@ const CalendarSection = ({ title, storageKey, assignedModel }) => {
   const handleDayClick = (day) => {
     const key = dateKey(day);
     const data = solvedDates[key];
-    setSelectedDay({ day, key, ...data, model: data?.model || assignedModel, solved: Boolean(data) });
+    const generatedModel = type === 'IP' ? getDailyIPModel(key) : getDailyLPModel(key);
+    setSelectedDay({ day, key, ...data, model: data?.model || generatedModel, solved: Boolean(data) });
   };
 
   const prevMonth = () => {
@@ -277,8 +278,8 @@ const ChallengeCalendarView = () => {
           maxHeight: 'none',
         }}
       >
-        <CalendarSection title="DAILY LP" storageKey="op_challenge_lp_solved" assignedModel={DAILY_LP_MODEL} />
-        <CalendarSection title="DAILY IP" storageKey="op_challenge_ip_solved" assignedModel={DAILY_IP_MODEL} />
+        <CalendarSection title="DAILY LP" storageKey="op_challenge_lp_solved" type="LP" />
+        <CalendarSection title="DAILY IP" storageKey="op_challenge_ip_solved" type="IP" />
       </div>
     </div>
   );

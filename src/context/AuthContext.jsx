@@ -1,32 +1,65 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useState, useEffect, useContext } from 'react';
+import {
+  auth, db
+} from '../services/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged
+} from 'firebase/auth';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-const AuthContext = createContext();
-const ACCOUNTS_KEY = 'op_accounts';
-const readAccounts = () => { try { return JSON.parse(localStorage.getItem(ACCOUNTS_KEY) || '[]'); } catch { return []; } };
+export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('op_user') || 'null'); } catch { return null; } });
-  const setActiveUser = (username) => {
-    const userData = { username, loggedInAt: new Date().toISOString() };
-    localStorage.setItem('op_user', JSON.stringify(userData));
-    setUser(userData);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // This "Watcher" keeps you logged in even if you refresh the page
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // Fetch extra info (like username) from Firestore
+        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+        setUser({
+          uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          ...userDoc.data()
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Login Function
+  const login = async (email, password) => {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    return result.user;
   };
-  const signup = (username, password) => {
-    const normalized = username.trim();
-    const accounts = readAccounts();
-    if (accounts.some((account) => account.username.toLowerCase() === normalized.toLowerCase())) return { ok: false, message: 'THIS CALLSIGN IS ALREADY REGISTERED.' };
-    localStorage.setItem(ACCOUNTS_KEY, JSON.stringify([...accounts, { username: normalized, password }]));
-    setActiveUser(normalized);
-    return { ok: true };
+
+  // Sign Up Function
+  const signup = async (email, password, username) => {
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    // Save the username to the database
+    await setDoc(doc(db, 'users', result.user.uid), {
+      username: username,
+      email: email,
+      createdAt: new Date().toISOString()
+    });
+    return result.user;
   };
-  const login = (username, password) => {
-    const account = readAccounts().find((item) => item.username.toLowerCase() === username.trim().toLowerCase() && item.password === password);
-    if (!account) return { ok: false, message: 'INVALID CALLSIGN OR ACCESS CODE.' };
-    setActiveUser(account.username);
-    return { ok: true };
-  };
-  const logout = () => { setUser(null); localStorage.removeItem('op_user'); };
-  return <AuthContext.Provider value={{ user, signup, login, logout }}>{children}</AuthContext.Provider>;
+
+  const logout = () => signOut(auth);
+
+  return (
+    <AuthContext.Provider value={{ user, login, signup, logout }}>
+      {!loading && children}
+    </AuthContext.Provider>
+  );
 };
 
 export const useAuth = () => useContext(AuthContext);

@@ -3,6 +3,9 @@
  * Enables exact tableau arithmetic and clean fraction formatting (emathhelp.net style).
  */
 
+// Debug flag for fraction operations - set to false for production
+const DEBUG_FRACTIONS = false;
+
 function gcd(a, b) {
   let x = Math.abs(a);
   let y = Math.abs(b);
@@ -80,23 +83,50 @@ export class Fraction {
 
   add(other) {
     const o = other instanceof Fraction ? other : new Fraction(other);
-    return new Fraction(this.n * o.d + o.n * this.d, this.d * o.d);
+    const result = new Fraction(this.n * o.d + o.n * this.d, this.d * o.d);
+    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Addition ===', { 
+      a: this.toString(), 
+      b: o.toString(), 
+      result: result.toString() 
+    });
+    return result;
   }
 
   sub(other) {
     const o = other instanceof Fraction ? other : new Fraction(other);
-    return new Fraction(this.n * o.d - o.n * this.d, this.d * o.d);
+    const result = new Fraction(this.n * o.d - o.n * this.d, this.d * o.d);
+    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Subtraction ===', { 
+      a: this.toString(), 
+      b: o.toString(), 
+      result: result.toString() 
+    });
+    return result;
   }
 
   mul(other) {
     const o = other instanceof Fraction ? other : new Fraction(other);
-    return new Fraction(this.n * o.n, this.d * o.d);
+    const result = new Fraction(this.n * o.n, this.d * o.d);
+    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Multiplication ===', { 
+      a: this.toString(), 
+      b: o.toString(), 
+      result: result.toString() 
+    });
+    return result;
   }
 
   div(other) {
     const o = other instanceof Fraction ? other : new Fraction(other);
-    if (o.n === 0) throw new Error('Division by zero fraction');
-    return new Fraction(this.n * o.d, this.d * o.n);
+    if (o.n === 0) {
+      console.error('=== FRACTION ERROR: Division by zero ===', { this: this.toString(), other: o.toString() });
+      throw new Error('Division by zero fraction');
+    }
+    const result = new Fraction(this.n * o.d, this.d * o.n);
+    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Division ===', { 
+      a: this.toString(), 
+      b: o.toString(), 
+      result: result.toString() 
+    });
+    return result;
   }
 
   neg() {

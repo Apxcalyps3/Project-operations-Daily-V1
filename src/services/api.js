@@ -7,6 +7,9 @@ const SOLVE_HISTORY_KEY  = 'operations_daily_solve_history';
 const CHALLENGE_LP_KEY   = 'op_challenge_lp_solved';
 const CHALLENGE_IP_KEY   = 'op_challenge_ip_solved';
 
+import { db, auth } from './firebase';
+import { collection, addDoc, doc, setDoc } from 'firebase/firestore';
+
 /* ── Solver History ── */
 
 export function getSolveHistory() {
@@ -48,6 +51,15 @@ export function saveSolveRecord(type = 'LP', details = {}) {
 
     const updated = [record, ...history].slice(0, 50); // keep last 50
     localStorage.setItem(SOLVE_HISTORY_KEY, JSON.stringify(updated));
+
+    if (auth && auth.currentUser) {
+      try {
+        addDoc(collection(db, 'users', auth.currentUser.uid, 'history'), record).catch(console.error);
+      } catch (err) {
+        console.error('Firestore save error:', err);
+      }
+    }
+
     return record;
   } catch (e) {
     console.error('saveSolveRecord error:', e);
@@ -61,8 +73,17 @@ export function markChallengeAsSolved(type = 'LP', dateKey, modelSnapshot = {}) 
   try {
     const raw = localStorage.getItem(key);
     const data = raw ? JSON.parse(raw) : {};
-    data[dateKey] = { solvedAt: new Date().toISOString(), model: modelSnapshot };
+    const challengeRecord = { solvedAt: new Date().toISOString(), model: modelSnapshot };
+    data[dateKey] = challengeRecord;
     localStorage.setItem(key, JSON.stringify(data));
+
+    if (auth && auth.currentUser) {
+      try {
+        setDoc(doc(db, 'users', auth.currentUser.uid, 'challenges', `${type}_${dateKey}`), challengeRecord).catch(console.error);
+      } catch (err) {
+        console.error('Firestore save error:', err);
+      }
+    }
   } catch (e) {
     console.error('markChallengeAsSolved error:', e);
   }
@@ -80,32 +101,76 @@ export function getChallengeHistory(type = 'LP') {
 
 /* ── Daily Challenge Models ── */
 
-// PDF Page 6 — Daily LP Model
-export const DAILY_LP_MODEL = {
-  title: 'DAILY LP MODEL',
-  objective: 'MAXIMIZE Z = 5X₁ + 4X₂',
-  rawObjective: [5, 4],
-  isMax: true,
-  constraints: [
-    { text: '5X₁ + 26X₂ ≤ 5',  coefficients: [5, 26], relation: '<=', rhs: 5 },
-    { text: '8X₁ + 7X₂ ≤ 4',   coefficients: [8, 7],  relation: '<=', rhs: 4 },
-  ],
-  nonNegativity: 'X₁, X₂ ≥ 0',
-  numVars: 2,
-};
+// Simple seeded PRNG
+function mulberry32(a) {
+  return function() {
+    var t = a += 0x6D2B79F5;
+    t = Math.imul(t ^ t >>> 15, t | 1);
+    t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  }
+}
 
-// PDF Page 7 — Daily IP Model
-export const DAILY_IP_MODEL = {
-  title: 'DAILY IP MODEL',
-  objective: 'MINIMIZE Z = 6X₁ + 7X₂ + 8X₃',
-  rawObjective: [6, 7, 8],
-  isMax: false,
-  constraints: [
-    { text: '4X₁ + 3X₂ ≥ 15',  coefficients: [4, 3, 0], relation: '>=', rhs: 15 },
-    { text: '9X₂ + 2X₃ ≥ 24',  coefficients: [0, 9, 2], relation: '>=', rhs: 24 },
-    { text: '7X₁ + 3X₃ ≥ 10',  coefficients: [7, 0, 3], relation: '>=', rhs: 10 },
-  ],
-  nonNegativity: 'X₁, X₂, X₃ ≥ 0',
-  integerConstraint: 'X₁, X₂, X₃ ∈ ℤ',
-  numVars: 3,
-};
+function generateModel(type, dateStr) {
+  // Use date string as seed
+  let seed = 0;
+  for (let i = 0; i < dateStr.length; i++) {
+    seed += dateStr.charCodeAt(i) * Math.pow(10, i % 3);
+  }
+  const random = mulberry32(seed + (type === 'IP' ? 100 : 0));
+
+  const numVars = Math.floor(random() * 3) + 2; // 2 to 4
+  const numConstraints = Math.floor(random() * 3) + 2; // 2 to 4
+  const isMax = random() > 0.5;
+
+  const rawObjective = Array.from({ length: numVars }, () => Math.floor(random() * 9) + 1);
+  let objectiveStr = `${isMax ? 'MAXIMIZE' : 'MINIMIZE'} Z = ` + rawObjective.map((c, i) => `${c}X${String.fromCharCode(8321 + i)}`).join(' + ');
+
+  const constraints = [];
+  const rels = ['<=', '>=', '='];
+  for (let i = 0; i < numConstraints; i++) {
+    const coeffs = Array.from({ length: numVars }, () => Math.floor(random() * 10));
+    const rhs = Math.floor(random() * 20) + 5;
+    const rel = rels[Math.floor(random() * rels.length)];
+    
+    let textParts = [];
+    coeffs.forEach((c, j) => {
+      if (c !== 0) {
+        textParts.push(`${c}X${String.fromCharCode(8321 + j)}`);
+      }
+    });
+    let text = textParts.join(' + ');
+    if (!text) text = `0X₁`;
+    
+    let relStr = rel === '<=' ? '≤' : (rel === '>=' ? '≥' : '=');
+    text += ` ${relStr} ${rhs}`;
+
+    constraints.push({
+      text,
+      coefficients: coeffs,
+      relation: rel,
+      rhs
+    });
+  }
+
+  const varsArr = Array.from({ length: numVars }, (_, i) => `X${String.fromCharCode(8321 + i)}`);
+  
+  return {
+    title: `DAILY ${type} MODEL`,
+    objective: objectiveStr,
+    rawObjective,
+    isMax,
+    constraints,
+    nonNegativity: `${varsArr.join(', ')} ≥ 0`,
+    integerConstraint: type === 'IP' ? `${varsArr.join(', ')} ∈ ℤ` : undefined,
+    numVars,
+  };
+}
+
+export function getDailyLPModel(dateStr) {
+  return generateModel('LP', dateStr);
+}
+
+export function getDailyIPModel(dateStr) {
+  return generateModel('IP', dateStr);
+}
