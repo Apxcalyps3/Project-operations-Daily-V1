@@ -66,7 +66,7 @@ We highly appreciate your input. To provide feedback or report a bug, you can:
 
 ## 🚀 Live Access
 View the latest deployed version here:
-[**https://apxcalyps3.github.io/Project-Operations-Daily/**](https://apxcalyps3.github.io/Project-Operations-Daily/)
+[**https://apxcalyps3.github.io/Project-operations-Daily-V1/**](https://apxcalyps3.github.io/Project-operations-Daily-V1/)
 
 ---
 *Created as part of a comprehensive Operations Research system overhaul.*
