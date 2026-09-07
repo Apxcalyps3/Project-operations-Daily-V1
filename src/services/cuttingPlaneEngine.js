@@ -7,7 +7,6 @@
  */
 
 import { Fraction, toFraction, formatRowOp } from './fractionUtils.js';
-import { solveDualSimplex } from './dualSimplexEngine.js';
 import { solveBigM } from './bigMEngine.js';
 
 /**

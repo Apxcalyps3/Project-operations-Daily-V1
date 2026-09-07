@@ -10,6 +10,7 @@ import HistoryPage from './pages/HistoryPage';
 import SettingsPage from './pages/SettingsPage';
 
 import logoMain from './assets/logo-main.png';
+import RetroGrid from './components/layout/RetroGrid';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 
@@ -18,8 +19,8 @@ function App() {
     <ThemeProvider>
       <AuthProvider>
         <Router>
-          {/* Bright Retro Perspective Grid — CSS-drawn, covers bottom 75vh */}
-          <div className="perspective-grid" />
+          {/* Persistent Retro 3D Perspective Grid Background (unchanging across all pages) */}
+          <RetroGrid />
 
           {/* Centered Application Shell */}
           <div className="page-shell">

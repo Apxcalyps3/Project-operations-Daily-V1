@@ -42,25 +42,28 @@ body {
   justify-content: center;
 }
 
-/* ─── Perspective Grid Background ─── */
-.perspective-grid {
+/* ─── Persistent Retro Perspective Grid Background (bg-grid.png match) ─── */
+.retro-grid-container {
   position: fixed;
-  bottom: -10%;
-  left: -50%;
-  width: 200%;
-  height: 75vh;
-  opacity: 1;
-  background-image: 
-    linear-gradient(to right, rgba(74, 222, 128, 0.55) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(74, 222, 128, 0.55) 1px, transparent 1px);
-  background-size: 40px 40px;
-  transform: perspective(600px) rotateX(60deg);
-  transform-origin: bottom center;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
   z-index: 0;
   pointer-events: none;
-  mask-image: linear-gradient(to bottom, transparent 0%, black 60%);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 60%);
-  filter: drop-shadow(0 0 12px rgba(74, 222, 128, 0.85));
+  overflow: hidden;
+  background-color: var(--black);
+  user-select: none;
+}
+
+.retro-grid-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.perspective-grid {
+  display: none;
 }
 
 /* ─── Page Shell (wraps Header + Routes) ─── */
@@ -467,15 +470,19 @@ body {
 .calendar-day-name:last-child { border-right: none; }
 
 .calendar-day-cell {
-  height: 36px;
+  height: 42px;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   font-size: 0.82rem;
   border-right: 1px solid rgba(74, 222, 128, 0.2);
   border-bottom: 1px solid rgba(74, 222, 128, 0.2);
   cursor: pointer;
   transition: all 0.15s ease;
+  position: relative;
+  user-select: none;
 }
 
 .calendar-day-cell:hover { background: rgba(74, 222, 128, 0.15); }
@@ -483,19 +490,288 @@ body {
 .calendar-day-cell.empty { cursor: default; }
 .calendar-day-cell.empty:hover { background: transparent; }
 
+.calendar-cell-num {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.calendar-glyph {
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.calendar-glyph.glyph-solved {
+  color: #4ade80;
+  text-shadow: 0 0 6px rgba(74, 222, 128, 0.9);
+}
+
+.calendar-glyph.glyph-missed {
+  color: #ef4444;
+  text-shadow: 0 0 6px rgba(239, 68, 68, 0.9);
+}
+
+.calendar-glyph.glyph-today {
+  color: #4ade80;
+  font-size: 0.68rem;
+  animation: pulse-glow 1.5s infinite;
+}
+
 .calendar-day-cell.today {
-  background: rgba(74, 222, 128, 0.22);
+  border: 1.5px solid #4ade80;
+  background: rgba(74, 222, 128, 0.2);
+  box-shadow: inset 0 0 10px rgba(74, 222, 128, 0.35), 0 0 8px rgba(74, 222, 128, 0.4);
   font-weight: bold;
 }
 
 .calendar-day-cell.solved {
-  box-shadow: inset 0 0 10px rgba(74, 222, 128, 0.6);
-  color: #fff;
-  text-shadow: 0 0 8px rgba(74, 222, 128, 1);
+  background: rgba(20, 83, 45, 0.35);
+  color: #4ade80;
 }
 
 .calendar-day-cell.missed {
-  opacity: 0.25;
+  background: rgba(239, 68, 68, 0.08);
+  opacity: 0.65;
+}
+
+.calendar-day-cell.future {
+  opacity: 0.18;
+  cursor: not-allowed;
+  background: transparent;
+}
+
+.calendar-day-cell.future:hover {
+  background: transparent;
+  box-shadow: none;
+}
+
+.calendar-day-cell.selected {
+  outline: 2px solid #86efac;
+  outline-offset: -2px;
+}
+
+/* ─── Calendar Legend ─── */
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-top: 1px solid rgba(74, 222, 128, 0.2);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  background: rgba(0, 0, 0, 0.45);
+  color: rgba(74, 222, 128, 0.8);
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legend-sym {
+  font-weight: 900;
+  font-size: 0.78rem;
+  line-height: 1;
+}
+
+.legend-sym.glyph-future {
+  opacity: 0.3;
+}
+
+/* ─── Calendar Model Inspector ─── */
+.calendar-model-inspector {
+  border-top: 1.5px solid rgba(74, 222, 128, 0.4);
+  background: rgba(0, 0, 0, 0.65);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px dashed rgba(74, 222, 128, 0.25);
+}
+
+.inspector-date {
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #fff;
+}
+
+.status-tag {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.status-tag.tag-solved {
+  background: rgba(74, 222, 128, 0.2);
+  border: 1px solid #4ade80;
+  color: #4ade80;
+}
+
+.status-tag.tag-today {
+  background: rgba(74, 222, 128, 0.15);
+  border: 1px solid #86efac;
+  color: #86efac;
+  animation: pulse-glow 2s infinite;
+}
+
+.status-tag.tag-missed {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid #ef4444;
+  color: #f87171;
+}
+
+.inspector-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inspector-section-label {
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(74, 222, 128, 0.75);
+}
+
+.inspector-objective {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #4ade80;
+  padding: 4px 8px;
+  background: rgba(74, 222, 128, 0.06);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 4px;
+}
+
+.inspector-bracket-container {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.inspector-curly-svg {
+  display: flex;
+  align-items: stretch;
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 18px;
+}
+
+.inspector-constraints-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  font-size: 0.88rem;
+  letter-spacing: 0.05em;
+  justify-content: center;
+}
+
+.inspector-constraint-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #4ade80;
+  font-family: var(--font-retro, 'Share Tech Mono', monospace);
+}
+
+.constraint-idx {
+  font-size: 0.75rem;
+  opacity: 0.65;
+  width: 16px;
+}
+
+.constraint-text {
+  font-weight: 500;
+}
+
+.inspector-structural-divider {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px dashed rgba(74, 222, 128, 0.25);
+}
+
+.structural-tag {
+  font-size: 0.68rem;
+  color: rgba(74, 222, 128, 0.55);
+  margin-left: 6px;
+}
+
+.inspector-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(74, 222, 128, 0.2);
+  margin-top: 4px;
+}
+
+.inspector-solved-at {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: rgba(74, 222, 128, 0.75);
+}
+
+.btn-solve-today {
+  background: rgba(74, 222, 128, 0.2);
+  border: 1.5px solid #4ade80;
+  color: #4ade80;
+  font-family: var(--font-retro, 'Share Tech Mono', monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-solve-today:hover {
+  background: #4ade80;
+  color: #000;
+  box-shadow: 0 0 12px rgba(74, 222, 128, 0.5);
+}
+
+.btn-close-inspector {
+  background: transparent;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  color: rgba(74, 222, 128, 0.6);
+  font-family: var(--font-retro, 'Share Tech Mono', monospace);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  padding: 5px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  margin-left: auto;
+}
+
+.btn-close-inspector:hover {
+  color: #4ade80;
+  border-color: #4ade80;
 }
 
 /* ─── History Solve List ─── */

@@ -5,6 +5,7 @@ import GraphVisualization from './GraphVisualization';
 import { solveCuttingPlane, solveBranchAndBound } from '../../services/cuttingPlaneEngine';
 import { solveSimplex } from '../../services/simplexEngine';
 import { saveSolveRecord } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
 
 const LABEL_STYLE = {
   fontSize: '0.85rem',
@@ -27,6 +28,7 @@ const SolverForm = ({
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Allow reloading a model from Solver History via navigate state
   const preload = location.state?.model || null;
@@ -227,7 +229,7 @@ const SolverForm = ({
         optimalZ: result.optimalZ,
         results: result,
         model: modelSnapshot,
-      });
+      }, user?.uid);
     } catch (err) {
       setError(String(err));
     }

@@ -2,7 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Window from '../components/layout/Window';
 import Navbar from '../components/layout/Navbar';
-import { getSolveHistory, getDailyLPModel, getDailyIPModel } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import {
+  getSolveHistory,
+  getDailyLPModel,
+  getDailyIPModel,
+  getChallengeHistory,
+  syncUserChallengesFromFirestore,
+  syncUserSolveHistoryFromFirestore
+} from '../services/api';
 
 import iconSolverH from '../assets/icons/icon-solverh.png';
 import iconChallengeH from '../assets/icons/icon-challengeh.png';
@@ -19,25 +27,39 @@ const MONTHS = [
 
 const DAY_NAMES = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
 
-const CalendarSection = ({ title, storageKey, type }) => {
+export const CalendarSection = ({ title, type }) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const now = new Date();
-  const [month, setMonth] = useState(now.getMonth());    // 0-indexed
-  const [year, setYear]   = useState(now.getFullYear());
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth();
+  const currentDate = now.getDate();
+  const todayKeyStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`;
+
+  const [month, setMonth] = useState(currentMonth); // 0-indexed
+  const [year, setYear]   = useState(currentYear);
   const [selectedDay, setSelectedDay] = useState(null);
   const [solvedDates, setSolvedDates] = useState({});    // { 'YYYY-MM-DD': { model, ... } }
 
-  const currentYear = now.getFullYear();
-  const years = Array.from({ length: 5 }, (_, i) => currentYear - 2 + i);
+  // Available years: past years up to current year (prevent navigating to future years)
+  const years = Array.from({ length: 4 }, (_, i) => currentYear - 3 + i);
 
-  // Load solved dates from localStorage
+  // Load solved dates scoped to the current user (or guest fallback)
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      setSolvedDates(raw ? JSON.parse(raw) : {});
-    } catch {
-      setSolvedDates({});
+    // 1. Immediate retrieval from local scoped cache
+    const localData = getChallengeHistory(type, user?.uid);
+    setSolvedDates(localData || {});
+
+    // 2. Synchronize from Firestore if authenticated
+    if (user?.uid) {
+      syncUserChallengesFromFirestore(user.uid).then((allChallenges) => {
+        const typeKey = type.toLowerCase();
+        if (allChallenges && allChallenges[typeKey]) {
+          setSolvedDates(allChallenges[typeKey]);
+        }
+      }).catch(console.error);
     }
-  }, [storageKey]);
+  }, [type, user?.uid]);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const startDay    = new Date(year, month, 1).getDay(); // 0 = Sun
@@ -48,31 +70,48 @@ const CalendarSection = ({ title, storageKey, type }) => {
     return `${year}-${mm}-${dd}`;
   };
 
-  const isPast = (day) => {
-    const d = new Date(year, month, day);
-    d.setHours(23, 59, 59);
-    return d < now;
-  };
-
-  const isToday = (day) =>
-    day === now.getDate() && month === now.getMonth() && year === now.getFullYear();
+  const isAtLatestMonth = year > currentYear || (year === currentYear && month >= currentMonth);
 
   const handleDayClick = (day) => {
     const key = dateKey(day);
+    // Strict guard: future challenges are hidden
+    if (key > todayKeyStr) return;
+
     const data = solvedDates[key];
     const generatedModel = type === 'IP' ? getDailyIPModel(key) : getDailyLPModel(key);
-    setSelectedDay({ day, key, ...data, model: data?.model || generatedModel, solved: Boolean(data) });
+    const isSolved = Boolean(data);
+    const isToday = key === todayKeyStr;
+    const isMissed = key < todayKeyStr && !isSolved;
+
+    setSelectedDay({
+      day,
+      key,
+      solvedAt: data?.solvedAt,
+      model: data?.model || generatedModel,
+      solved: isSolved,
+      isToday,
+      isMissed
+    });
   };
 
   const prevMonth = () => {
-    if (month === 0) { setMonth(11); setYear(y => y - 1); }
-    else setMonth(m => m - 1);
+    if (month === 0) {
+      setMonth(11);
+      setYear(y => y - 1);
+    } else {
+      setMonth(m => m - 1);
+    }
     setSelectedDay(null);
   };
 
   const nextMonth = () => {
-    if (month === 11) { setMonth(0); setYear(y => y + 1); }
-    else setMonth(m => m + 1);
+    if (isAtLatestMonth) return; // Disallow navigating into future months
+    if (month === 11) {
+      setMonth(0);
+      setYear(y => y + 1);
+    } else {
+      setMonth(m => m + 1);
+    }
     setSelectedDay(null);
   };
 
@@ -89,17 +128,34 @@ const CalendarSection = ({ title, storageKey, type }) => {
             <select
               className="calendar-select"
               value={month}
-              onChange={(e) => { setMonth(Number(e.target.value)); setSelectedDay(null); }}
+              onChange={(e) => {
+                const targetMonth = Number(e.target.value);
+                if (year === currentYear && targetMonth > currentMonth) return;
+                setMonth(targetMonth);
+                setSelectedDay(null);
+              }}
               aria-label="Select month"
             >
-              {MONTHS.map((m, i) => (
-                <option key={m} value={i}>{m}</option>
-              ))}
+              {MONTHS.map((m, i) => {
+                const isFutureMonth = year === currentYear && i > currentMonth;
+                return (
+                  <option key={m} value={i} disabled={isFutureMonth}>
+                    {m}{isFutureMonth ? ' (LOCKED)' : ''}
+                  </option>
+                );
+              })}
             </select>
             <select
               className="calendar-select"
               value={year}
-              onChange={(e) => { setYear(Number(e.target.value)); setSelectedDay(null); }}
+              onChange={(e) => {
+                const targetYear = Number(e.target.value);
+                setYear(targetYear);
+                if (targetYear === currentYear && month > currentMonth) {
+                  setMonth(currentMonth);
+                }
+                setSelectedDay(null);
+              }}
               aria-label="Select year"
             >
               {years.map((y) => (
@@ -108,7 +164,15 @@ const CalendarSection = ({ title, storageKey, type }) => {
             </select>
           </div>
 
-          <button className="calendar-nav-btn" onClick={nextMonth} aria-label="Next month">›</button>
+          <button
+            className="calendar-nav-btn"
+            onClick={nextMonth}
+            aria-label="Next month"
+            disabled={isAtLatestMonth}
+            style={{ opacity: isAtLatestMonth ? 0.3 : 1, cursor: isAtLatestMonth ? 'not-allowed' : 'pointer' }}
+          >
+            ›
+          </button>
         </div>
       </div>
 
@@ -125,59 +189,175 @@ const CalendarSection = ({ title, storageKey, type }) => {
 
         {/* Day cells */}
         {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day  = i + 1;
-          const key  = dateKey(day);
-          const solved = !!solvedDates[key];
-          const past   = isPast(day);
-          const today  = isToday(day);
-          const missed = past && !solved && !today;
+          const day = i + 1;
+          const key = dateKey(day);
+          const isToday = key === todayKeyStr;
+          const isFuture = key > todayKeyStr;
+          const isPast = key < todayKeyStr;
+          const solved = Boolean(solvedDates[key]);
+          const missed = isPast && !solved;
+          const isSelected = selectedDay?.day === day && selectedDay?.key === key;
 
           let cls = 'calendar-day-cell';
-          if (today) cls += ' today';
-          else if (solved) cls += ' solved';
-          else if (missed) cls += ' missed';
+          if (isFuture) {
+            cls += ' future';
+          } else {
+            if (isToday) cls += ' today';
+            if (solved) cls += ' solved';
+            if (missed) cls += ' missed';
+            if (isSelected) cls += ' selected';
+          }
 
           return (
             <div
               key={day}
               className={cls}
-              onClick={() => handleDayClick(day)}
-              role="button"
-              tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') handleDayClick(day); }}
-              aria-label={`${MONTHS[month]} ${day}, ${year}${solved ? ' — Solved' : missed ? ' — Missed' : ''}`}
+              onClick={isFuture ? undefined : () => handleDayClick(day)}
+              role={isFuture ? 'cell' : 'button'}
+              tabIndex={isFuture ? -1 : 0}
+              onKeyDown={(e) => {
+                if (!isFuture && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  handleDayClick(day);
+                }
+              }}
+              aria-label={
+                isFuture
+                  ? `${MONTHS[month]} ${day}, ${year} — Locked (Future Challenge)`
+                  : `${MONTHS[month]} ${day}, ${year}${solved ? ' — Completed ✓' : missed ? ' — Missed ✕' : ' — Active Today'}`
+              }
+              title={
+                isFuture
+                  ? `${MONTHS[month]} ${day}, ${year} — Locked (Future Challenge)`
+                  : `${MONTHS[month]} ${day}, ${year}${solved ? ' — Completed ✓' : missed ? ' — Missed ✕' : ' — Active Today'}`
+              }
             >
-              {day}
+              <span className="calendar-cell-num">{day}</span>
+              {solved && <span className="calendar-glyph glyph-solved" aria-hidden="true">✓</span>}
+              {missed && <span className="calendar-glyph glyph-missed" aria-hidden="true">✕</span>}
+              {isToday && !solved && <span className="calendar-glyph glyph-today" aria-hidden="true">☼</span>}
             </div>
           );
         })}
       </div>
 
-      {/* Selected Day Inspector */}
-      {selectedDay && (
-        <div style={{
-          borderTop: '1px solid rgba(74,222,128,0.3)',
-          padding: '12px 14px',
-          fontSize: '0.78rem',
-          letterSpacing: '0.08em',
-          lineHeight: 1.6,
-        }}>
-          <div style={{ fontWeight: 700, marginBottom: '6px' }}>
-            {MONTHS[month]} {selectedDay.day}, {year}
+      {/* Terminal Status Legend */}
+      <div className="calendar-legend">
+        <div className="legend-item">
+          <span className="legend-sym glyph-today">☼</span>
+          <span>TODAY</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-sym glyph-solved">✓</span>
+          <span>COMPLETED</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-sym glyph-missed">✕</span>
+          <span>MISSED</span>
+        </div>
+        <div className="legend-item">
+          <span className="legend-sym glyph-future">·</span>
+          <span>LOCKED</span>
+        </div>
+      </div>
+
+      {/* Selected Day Full Problem Inspector */}
+      {selectedDay && selectedDay.key <= todayKeyStr && (
+        <div className="calendar-model-inspector">
+          {/* Header */}
+          <div className="inspector-header">
+            <div className="inspector-date">
+              {MONTHS[month]} {selectedDay.day}, {year} · {title}
+            </div>
+            <div className="inspector-status">
+              {selectedDay.solved ? (
+                <span className="status-tag tag-solved">COMPLETED ✓</span>
+              ) : selectedDay.isToday ? (
+                <span className="status-tag tag-today">ACTIVE TODAY ☼</span>
+              ) : (
+                <span className="status-tag tag-missed">MISSED ✕ (EXPIRED)</span>
+              )}
+            </div>
           </div>
-          <div>STATUS: <span style={{ color: selectedDay.solved ? '#4ade80' : 'rgba(74,222,128,0.55)' }}>{selectedDay.solved ? 'SOLVED ✓' : 'ASSIGNED'}</span></div>
-          {selectedDay.model && <div style={{ marginTop: '6px', opacity: 0.8 }}>
-            {selectedDay.model.title} · {selectedDay.model.objective}
-          </div>}
-          <button
-            onClick={() => setSelectedDay(null)}
-            style={{
-              background: 'transparent', border: 'none', color: 'rgba(74,222,128,0.5)',
-              cursor: 'pointer', fontSize: '0.7rem', marginTop: '8px', padding: 0,
-            }}
-          >
-            [CLOSE]
-          </button>
+
+          {/* Entire Problem: Objective and Constraints */}
+          <div className="inspector-body">
+            <div className="inspector-section-label">OBJECTIVE FUNCTION:</div>
+            <div className="inspector-objective">
+              {selectedDay.model?.objective || 'N/A'}
+            </div>
+
+            <div className="inspector-section-label" style={{ marginTop: '6px' }}>
+              SUBJECT TO:
+            </div>
+
+            <div className="inspector-bracket-container">
+              {/* Dynamic Scaling Curly Brace SVG */}
+              <div className="inspector-curly-svg">
+                <svg viewBox="0 0 20 100" preserveAspectRatio="none" style={{ width: '100%', height: '100%' }}>
+                  <path
+                    d="M 18,2 C 10,2 8,24 8,44 C 8,48 4,50 1,50 C 4,50 8,52 8,56 C 8,76 10,98 18,98"
+                    fill="none"
+                    stroke="#4ade80"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                </svg>
+              </div>
+
+              {/* All Constraints Inside Bracket */}
+              <div className="inspector-constraints-list">
+                {selectedDay.model?.constraints?.map((c, idx) => (
+                  <div key={idx} className="inspector-constraint-row">
+                    <span className="constraint-idx">{idx + 1}.</span>
+                    <span className="constraint-text">{c.text}</span>
+                  </div>
+                ))}
+
+                {/* Hardcoded Structural Constraints */}
+                <div className="inspector-structural-divider">
+                  <div className="inspector-constraint-row">
+                    <span className="constraint-text">{selectedDay.model?.nonNegativity}</span>
+                    <span className="structural-tag">[Non-Negativity]</span>
+                  </div>
+                  {selectedDay.model?.integerConstraint && (
+                    <div className="inspector-constraint-row">
+                      <span className="constraint-text">{selectedDay.model?.integerConstraint}</span>
+                      <span className="structural-tag">[Integer]</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer Actions & Solve Log */}
+          <div className="inspector-footer">
+            {selectedDay.solved && selectedDay.solvedAt && (
+              <div className="inspector-solved-at">
+                SOLVED AT: {new Date(selectedDay.solvedAt).toLocaleString()}
+              </div>
+            )}
+
+            {selectedDay.isToday && !selectedDay.solved && (
+              <button
+                className="btn-solve-today"
+                onClick={() => navigate('/challenge')}
+                title="Launch solver for today's challenge"
+              >
+                SOLVE TODAY'S CHALLENGE →
+              </button>
+            )}
+
+            <button
+              className="btn-close-inspector"
+              onClick={() => setSelectedDay(null)}
+              aria-label="Close inspector"
+            >
+              [CLOSE INSPECTOR]
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -190,11 +370,21 @@ const CalendarSection = ({ title, storageKey, type }) => {
 ───────────────────────────────────────────────── */
 const SolverHistoryList = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    setHistory(getSolveHistory());
-  }, []);
+    // 1. Load immediately from local scoped cache
+    const local = getSolveHistory(user?.uid);
+    setHistory(local);
+
+    // 2. Sync from Firestore if authenticated
+    if (user?.uid) {
+      syncUserSolveHistoryFromFirestore(user.uid).then((remote) => {
+        if (remote) setHistory(remote);
+      }).catch(console.error);
+    }
+  }, [user?.uid]);
 
   const handleReload = (item) => {
     if (!item.details?.model) {
@@ -210,13 +400,18 @@ const SolverHistoryList = () => {
 
   return (
     <div className="retro-window" style={{ maxWidth: '880px' }}>
-      <div className="retro-window-header">
-        <div className="window-dots">
-          <div className="window-dot" />
-          <div className="window-dot" />
-          <div className="window-dot" />
+      <div className="retro-window-header" style={{ justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div className="window-dots">
+            <div className="window-dot" />
+            <div className="window-dot" />
+            <div className="window-dot" />
+          </div>
+          <div className="window-title">SOLVER HISTORY</div>
         </div>
-        <div className="window-title">SOLVER HISTORY</div>
+        <div style={{ fontSize: '0.75rem', letterSpacing: '0.1em', opacity: 0.8, color: '#4ade80' }}>
+          {user ? `ACCOUNT: ${user.username || user.email}` : 'ACCOUNT: GUEST'}
+        </div>
       </div>
 
       <div className="retro-window-body" style={{ minHeight: '320px' }}>
@@ -256,15 +451,22 @@ const SolverHistoryList = () => {
    Dual calendar: DAILY LP + DAILY IP
 ───────────────────────────────────────────────── */
 const ChallengeCalendarView = () => {
+  const { user } = useAuth();
+
   return (
     <div className="retro-window" style={{ maxWidth: '920px' }}>
-      <div className="retro-window-header">
-        <div className="window-dots">
-          <div className="window-dot" />
-          <div className="window-dot" />
-          <div className="window-dot" />
+      <div className="retro-window-header" style={{ justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div className="window-dots">
+            <div className="window-dot" />
+            <div className="window-dot" />
+            <div className="window-dot" />
+          </div>
+          <div className="window-title">CHALLENGE HISTORY</div>
         </div>
-        <div className="window-title">CHALLENGE HISTORY</div>
+        <div style={{ fontSize: '0.75rem', letterSpacing: '0.1em', opacity: 0.8, color: '#4ade80' }}>
+          {user ? `ACCOUNT: ${user.username || user.email}` : 'ACCOUNT: GUEST'}
+        </div>
       </div>
 
       <div
@@ -278,8 +480,8 @@ const ChallengeCalendarView = () => {
           maxHeight: 'none',
         }}
       >
-        <CalendarSection title="DAILY LP" storageKey="op_challenge_lp_solved" type="LP" />
-        <CalendarSection title="DAILY IP" storageKey="op_challenge_ip_solved" type="IP" />
+        <CalendarSection title="DAILY LP" type="LP" />
+        <CalendarSection title="DAILY IP" type="IP" />
       </div>
     </div>
   );

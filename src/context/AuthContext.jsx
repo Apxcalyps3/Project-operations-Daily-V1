@@ -21,12 +21,20 @@ export const AuthProvider = ({ children }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // Fetch extra info (like username) from Firestore
-        const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-        setUser({
-          uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          ...userDoc.data()
-        });
+        try {
+          const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            ...(userDoc.exists() ? userDoc.data() : {})
+          });
+        } catch (err) {
+          console.warn('Could not fetch user profile:', err);
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+          });
+        }
       } else {
         setUser(null);
       }

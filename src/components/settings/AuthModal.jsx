@@ -85,7 +85,7 @@ const AuthModal = ({ onClose }) => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="pill-input"
-              placeholder="operator_01"
+              placeholder="op_acc_address@gmail.com"
               required
             />
           </div>
