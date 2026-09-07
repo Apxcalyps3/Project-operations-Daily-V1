@@ -32,6 +32,9 @@ User testing and community feedback are vital to making this tool perfect. If yo
 - Visual glitches or layout issues.
 - Navigation bugs.
 
+Feel free to leave a review here: 
+[**https://forms.gle/vyQe5Be4uDST2VLi9**](https://forms.gle/vyQe5Be4uDST2VLi9)
+
 Please let us know! 
 
 ---
