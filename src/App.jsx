@@ -1,5 +1,5 @@
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate, Link } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 
 import HomePage from './pages/HomePage';
 import SolverPage from './pages/SolverPage';
@@ -14,39 +14,81 @@ import RetroGrid from './components/layout/RetroGrid';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 
+function AppContent() {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
+
+  return (
+    <>
+      {/* Persistent Retro 3D Perspective Grid Background (unchanging across all pages) */}
+      <RetroGrid />
+
+      {/* Centered Application Shell */}
+      <div className="page-shell">
+        {/* Header: Logo as clickable Home link */}
+        <header className="app-header" style={{ flexDirection: 'column' }}>
+          <Link to="/" className="logo-link" title="Return to Home">
+            <img
+              src={logoMain}
+              alt="Operations Daily"
+              className="logo-image"
+            />
+          </Link>
+          {/* Description & version*/}
+          {isHomePage && (
+            <>
+              <p
+                style={{
+                  fontFamily: "'Share Tech Mono', monospace",
+                  color: 'rgba(74, 222, 128, 0.85)',
+                  fontSize: '0.95rem',
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  marginTop: '8px',
+                  textAlign: 'center',
+                  textShadow: '0 0 8px rgba(74, 222, 128, 0.4)',
+                }}
+              >
+                A website for learning operations research
+              </p>
+              <span
+                style={{
+                  fontFamily: "'Share Tech Mono', monospace",
+                  color: 'rgba(74, 222, 128, 0.6)',
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.18em',
+                  marginTop: '4px',
+                  textAlign: 'center',
+                }}
+              >
+                v1.0.1
+              </span>
+            </>
+          )}
+        </header>
+
+        {/* Routes — following Page 18 Flowchart */}
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/solver" element={<SolverPage />} />
+          <Route path="/solver/lp" element={<LPSolverPage />} />
+          <Route path="/solver/ip" element={<IPSolverPage />} />
+          <Route path="/challenge" element={<DailyChallengePage />} />
+          <Route path="/history" element={<HistoryPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </div>
+    </>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
         <Router>
-          {/* Persistent Retro 3D Perspective Grid Background (unchanging across all pages) */}
-          <RetroGrid />
-
-          {/* Centered Application Shell */}
-          <div className="page-shell">
-            {/* Header: Logo as clickable Home link */}
-            <header className="app-header">
-              <Link to="/" className="logo-link" title="Return to Home">
-                <img
-                  src={logoMain}
-                  alt="Operations Daily"
-                  className="logo-image"
-                />
-              </Link>
-            </header>
-
-            {/* Routes — following Page 18 Flowchart */}
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/solver" element={<SolverPage />} />
-              <Route path="/solver/lp" element={<LPSolverPage />} />
-              <Route path="/solver/ip" element={<IPSolverPage />} />
-              <Route path="/challenge" element={<DailyChallengePage />} />
-              <Route path="/history" element={<HistoryPage />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </div>
+          <AppContent />
         </Router>
       </AuthProvider>
     </ThemeProvider>
