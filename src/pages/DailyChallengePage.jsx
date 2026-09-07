@@ -11,6 +11,7 @@ import iconDailyIP from '../assets/icons/icon-dailyip.png';
 import { getDailyLPModel, getDailyIPModel, markChallengeAsSolved } from '../services/api';
 import { solveSimplex } from '../services/simplexEngine';
 import { solveCuttingPlane } from '../services/cuttingPlaneEngine';
+import { toFraction } from '../services/fractionUtils';
 
 const todayKey = () => {
   const date = new Date();
@@ -27,9 +28,23 @@ const DailyChallengePage = () => {
   const verifyChallenge = (submission) => {
     const solver = selectedChallenge === 'IP' ? solveCuttingPlane : solveSimplex;
     const solution = solver({ method: 'BIG M', isMax: activeModel.isMax, objective: activeModel.rawObjective, constraints: activeModel.constraints });
-    const matchesZ = Math.abs(submission.z - solution.optimalZ) < 0.001;
-    const matchesVariables = submission.vars.every((value, index) => Math.abs(value - solution.variables[`X${index + 1}`]) < 0.001);
-    if (!matchesZ || !matchesVariables) return { success: false, message: 'INCORRECT. CHECK YOUR OBJECTIVE VALUE AND VARIABLE VALUES.' };
+    
+    if (solution.error || !solution.optimalZ) {
+      return { success: false, message: 'UNABLE TO VERIFY: MODEL HAS NO FEASIBLE SOLUTION.' };
+    }
+
+    const solZNum = toFraction(solution.optimalZ).toNumber();
+    const matchesZ = Math.abs(submission.z - solZNum) < 0.01;
+
+    const matchesVariables = submission.vars.every((val, index) => {
+      const solVarStr = solution.variables?.[`X${index + 1}`] ?? '0';
+      const solVarNum = toFraction(solVarStr).toNumber();
+      return Math.abs(val - solVarNum) < 0.01;
+    });
+
+    if (!matchesZ || !matchesVariables) {
+      return { success: false, message: 'INCORRECT. CHECK YOUR OBJECTIVE VALUE AND VARIABLE VALUES.' };
+    }
     markChallengeAsSolved(selectedChallenge, todayKey(), { ...activeModel, solverType: selectedChallenge }, user?.uid);
     return { success: true, message: 'CORRECT — CHALLENGE COMPLETED AND RECORDED.' };
   };
