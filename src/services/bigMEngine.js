@@ -1,11 +1,14 @@
 /**
  * Big-M Simplex Engine for Linear Programming
  * Generates educational step-by-step tableaus with explicit M-penalty handling,
- * artificial/surplus variables, pivot steps, row operations, and explanations (emathhelp.net style).
+ * artificial/surplus variables, pivot steps, row operations, and explanations.
  */
 
 import { Fraction, toFraction, formatRowOp } from './fractionUtils.js';
 
+/* ============================================================
+   Big-M Simplex Algorithm Solver
+   ============================================================ */
 export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
   const steps = [];
   const numVars = objective.length;
@@ -15,7 +18,9 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     return { error: 'Please provide valid objective and constraints.' };
   }
 
-  // Parse coefficients
+  /* ------------------------------------------------------------
+     1. Coefficient Parsing & RHS Normalization
+     ------------------------------------------------------------ */
   const c = objective.map((val) => toFraction(val));
   const A = constraints.map((row) =>
     Array.from({ length: numVars }, (_, j) => toFraction(row.coefficients?.[j] ?? 0))
@@ -23,7 +28,7 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
   const b = constraints.map((row) => toFraction(row.rhs ?? 0));
   const rels = constraints.map((row) => row.relation || '<=');
 
-  // Normalize negative RHS (multiply row by -1 and invert relation)
+  // If RHS is negative, multiply row by -1 and reverse inequality relation
   for (let i = 0; i < numConstraints; i++) {
     if (b[i].isNegative()) {
       b[i] = b[i].neg();
@@ -35,7 +40,9 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     }
   }
 
-  // Determine needed slack, surplus, and artificial variables
+  /* ------------------------------------------------------------
+     2. Auxiliary Variable Setup (Slack, Surplus, Artificial)
+     ------------------------------------------------------------ */
   const cols = [];
   for (let j = 0; j < numVars; j++) {
     cols.push({ name: `X${j + 1}`, type: 'decision' });
@@ -62,7 +69,6 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
       cols.push({ name: aName, type: 'artificial' });
       constraintVars.push({ basic: aName, slack: null, surplus: eName, artificial: aName });
     } else {
-      // '='
       artificialCount++;
       const aName = `A${artificialCount}`;
       cols.push({ name: aName, type: 'artificial' });
@@ -74,9 +80,12 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
   const totalCols = cols.length;
   const colHeaders = cols.map((c) => c.name);
 
-  // Big M value for exact rational calculation (e.g. 100,000)
+  // Big M value for exact rational calculation
   const BIG_M = new Fraction(100000, 1);
 
+  /* ------------------------------------------------------------
+     3. Initial Tableau Construction
+     ------------------------------------------------------------ */
   let tableau = [];
   const basicVars = [];
 
@@ -103,10 +112,9 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     basicVars.push(cv.basic);
   }
 
-  // Construct Objective Row with Big M penalty
-  // Maximize: Max Z = sum(c_j X_j) - M * sum(A_i)  =>  Z - sum(c_j X_j) + M * sum(A_i) = 0
-  // Minimize: Min Z = sum(c_j X_j) + M * sum(A_i)  =>  Max W = -Z = -sum(c_j X_j) - M * sum(A_i)
-  //                                               =>  W + sum(c_j X_j) + M * sum(A_i) = 0
+  /* ------------------------------------------------------------
+     4. Canonical Objective Row Transformation
+     ------------------------------------------------------------ */
   const zRow = new Array(totalCols).fill(null).map(() => new Fraction(0, 1));
   for (let j = 0; j < numVars; j++) {
     zRow[j] = isMax ? c[j].neg() : c[j];
@@ -119,10 +127,7 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     }
   }
 
-  // Substitute out artificial variables from objective row so initial basis is in canonical form:
-  // For each constraint row i where basic variable is A_k:
-  // R_obj = R_obj - M * R_i.
-  // This cleanly cancels the A_k column coefficient (+M - M*1 = 0).
+  // Substitute artificial variables out of objective row for canonical form
   for (let i = 0; i < numConstraints; i++) {
     if (constraintVars[i].artificial) {
       for (let j = 0; j < totalCols; j++) {
@@ -150,6 +155,9 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     isOptimal: false,
   });
 
+  /* ------------------------------------------------------------
+     5. Iterative Simplex Pivoting
+     ------------------------------------------------------------ */
   const MAX_ITERATIONS = 40;
   let iteration = 0;
 
@@ -157,7 +165,7 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     iteration++;
     const currentZRow = tableau[numConstraints];
 
-    // Entering variable: most negative in objective row
+    // Entering variable selection: most negative reduced cost
     let pivotCol = -1;
     let mostNegative = new Fraction(0, 1);
 
@@ -250,7 +258,7 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     prevStep.ratios = ratioDetails;
     prevStep.explanation += ` Entering variable: ${enteringVarName} (most negative reduced cost). Leaving variable: ${leavingVarName} (minimum positive ratio = ${minRatio.toDisplayString()}). Pivot element: Row ${pivotRow + 1} (${leavingVarName}), Col ${enteringVarName} = ${pivotVal.toDisplayString()}.`;
 
-    // Row operations
+    // Calculate row operations
     const rowOps = [];
     const pivotRowLabel = `R${pivotRow + 1}`;
 
@@ -271,7 +279,7 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     const zOp = formatRowOp('RZ', zFactor, pivotRowLabel);
     if (zOp) rowOps.push(zOp);
 
-    // Apply Gauss-Jordan
+    // Apply Gauss-Jordan Elimination
     const newTableau = tableau.map((r) => r.map((cell) => new Fraction(cell.n, cell.d)));
 
     for (let j = 0; j < totalCols; j++) {
@@ -312,7 +320,10 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     });
   }
 
-  // Check if any artificial variable remains in the basis with a positive value
+  /* ------------------------------------------------------------
+     6. Solution Extraction & Infeasibility Validation
+     ------------------------------------------------------------ */
+  // Check if any artificial variable remains in the basis with positive value
   for (let i = 0; i < numConstraints; i++) {
     if (basicVars[i].startsWith('A') && tableau[i][totalCols - 1].isPositive()) {
       return {
@@ -331,7 +342,7 @@ export function solveBigM({ isMax = false, objective = [], constraints = [] }) {
     variables[varName] = rowIdx !== -1 ? tableau[rowIdx][totalCols - 1].toDisplayString() : '0';
   }
 
-  // Exact optimal Z calculation from decision variables: Z* = sum(c_j * X_j*)
+  // Exact optimal Z calculation from decision variables
   let computedZ = new Fraction(0, 1);
   for (let j = 0; j < numVars; j++) {
     const xVal = toFraction(variables[`X${j + 1}`]);

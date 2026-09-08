@@ -1,3 +1,8 @@
+/**
+ * Solver Selection Page
+ * Allows user to choose between Linear Programming (LP) and Integer Programming (IP) solvers.
+ */
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Window from '../components/layout/Window';
@@ -6,11 +11,9 @@ import Navbar from '../components/layout/Navbar';
 import iconLP from '../assets/icons/icon-lpsolver.png';
 import iconIP from '../assets/icons/icon-ipsolver.png';
 
-/**
- * SolverPage — Page 2 of PDF
- * Selection page between LP Solver and IP Solver.
- * Reached by clicking "Simplex Solver" on Home.
- */
+/* ============================================================
+   Solver Selection Component
+   ============================================================ */
 const SolverPage = () => {
   const navigate = useNavigate();
 

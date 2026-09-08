@@ -1,3 +1,8 @@
+/**
+ * History Page
+ * Displays user solve logs and dual calendar views for Daily LP & IP challenges.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Window from '../components/layout/Window';
@@ -15,11 +20,9 @@ import {
 import iconSolverH from '../assets/icons/icon-solverh.png';
 import iconChallengeH from '../assets/icons/icon-challengeh.png';
 
-/* ─────────────────────────────────────────────────
-   Calendar Component — matches PDF Page 10
-   Interactive Month/Year navigation
-   Marks dates from localStorage as Solved/Missed
-───────────────────────────────────────────────── */
+/* ============================================================
+   Calendar Component
+   ============================================================ */
 const MONTHS = [
   'JANUARY','FEBRUARY','MARCH','APRIL','MAY','JUNE',
   'JULY','AUGUST','SEPTEMBER','OCTOBER','NOVEMBER','DECEMBER',
@@ -36,21 +39,17 @@ export const CalendarSection = ({ title, type }) => {
   const currentDate = now.getDate();
   const todayKeyStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(currentDate).padStart(2, '0')}`;
 
-  const [month, setMonth] = useState(currentMonth); // 0-indexed
+  const [month, setMonth] = useState(currentMonth);
   const [year, setYear]   = useState(currentYear);
   const [selectedDay, setSelectedDay] = useState(null);
-  const [solvedDates, setSolvedDates] = useState({});    // { 'YYYY-MM-DD': { model, ... } }
+  const [solvedDates, setSolvedDates] = useState({});
 
-  // Available years: past years up to current year (prevent navigating to future years)
   const years = Array.from({ length: 4 }, (_, i) => currentYear - 3 + i);
 
-  // Load solved dates scoped to the current user (or guest fallback)
   useEffect(() => {
-    // 1. Immediate retrieval from local scoped cache
     const localData = getChallengeHistory(type, user?.uid);
     setSolvedDates(localData || {});
 
-    // 2. Synchronize from Firestore if authenticated
     if (user?.uid) {
       syncUserChallengesFromFirestore(user.uid).then((allChallenges) => {
         const typeKey = type.toLowerCase();
@@ -62,7 +61,7 @@ export const CalendarSection = ({ title, type }) => {
   }, [type, user?.uid]);
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startDay    = new Date(year, month, 1).getDay(); // 0 = Sun
+  const startDay    = new Date(year, month, 1).getDay();
 
   const dateKey = (day) => {
     const mm = String(month + 1).padStart(2, '0');
@@ -74,7 +73,6 @@ export const CalendarSection = ({ title, type }) => {
 
   const handleDayClick = (day) => {
     const key = dateKey(day);
-    // Strict guard: future challenges are hidden
     if (key > todayKeyStr) return;
 
     const data = solvedDates[key];
@@ -105,7 +103,7 @@ export const CalendarSection = ({ title, type }) => {
   };
 
   const nextMonth = () => {
-    if (isAtLatestMonth) return; // Disallow navigating into future months
+    if (isAtLatestMonth) return;
     if (month === 11) {
       setMonth(0);
       setYear(y => y + 1);
@@ -364,21 +362,18 @@ export const CalendarSection = ({ title, type }) => {
   );
 };
 
-/* ─────────────────────────────────────────────────
-   Recent Solves List — matches PDF Page 9
-   Clickable items reload the model into the solver.
-───────────────────────────────────────────────── */
+/* ============================================================
+   Recent Solves List Component
+   ============================================================ */
 const SolverHistoryList = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [history, setHistory] = useState([]);
 
   useEffect(() => {
-    // 1. Load immediately from local scoped cache
     const local = getSolveHistory(user?.uid);
     setHistory(local);
 
-    // 2. Sync from Firestore if authenticated
     if (user?.uid) {
       syncUserSolveHistoryFromFirestore(user.uid).then((remote) => {
         if (remote) setHistory(remote);
@@ -388,7 +383,6 @@ const SolverHistoryList = () => {
 
   const handleReload = (item) => {
     if (!item.details?.model) {
-      // Just navigate to the solver without preloading if no snapshot
       navigate(item.type === 'IP' ? '/solver/ip' : '/solver/lp');
       return;
     }
@@ -446,10 +440,9 @@ const SolverHistoryList = () => {
   );
 };
 
-/* ─────────────────────────────────────────────────
-   Challenge Calendar Page — matches PDF Page 10
-   Dual calendar: DAILY LP + DAILY IP
-───────────────────────────────────────────────── */
+/* ============================================================
+   Challenge Calendar Dual View
+   ============================================================ */
 const ChallengeCalendarView = () => {
   const { user } = useAuth();
 
@@ -487,11 +480,11 @@ const ChallengeCalendarView = () => {
   );
 };
 
-/* ─────────────────────────────────────────────────
-   HistoryPage — Page 8 Selection + Sub-views
-───────────────────────────────────────────────── */
+/* ============================================================
+   History Page Root Component
+   ============================================================ */
 const HistoryPage = () => {
-  const [view, setView] = useState(null); // null | 'solvers' | 'challenges'
+  const [view, setView] = useState(null);
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -501,7 +494,6 @@ const HistoryPage = () => {
       />
 
       {!view ? (
-        /* Page 8: Selection — Solver History / Challenge History */
         <div className="solver-grid">
           <Window
             iconSrc={iconSolverH}

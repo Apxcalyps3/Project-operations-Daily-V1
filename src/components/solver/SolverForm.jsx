@@ -1,12 +1,20 @@
+/**
+ * Solver Form Component
+ * Form interface for configuring variables, constraints, objective function, and executing solvers.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import SolverResults from './SolverResults';
 import GraphVisualization from './GraphVisualization';
 import { solveCuttingPlane, solveBranchAndBound } from '../../services/cuttingPlaneEngine';
 import { solveSimplex } from '../../services/simplexEngine';
-import { saveSolveRecord } from '../../services/api';
+import { saveSolveRecord, checkCurrentDailyChallenge } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
+/* ============================================================
+   Style Constants
+   ============================================================ */
 const LABEL_STYLE = {
   fontSize: '0.85rem',
   fontWeight: 700,
@@ -17,11 +25,9 @@ const LABEL_STYLE = {
 
 const ROW = { display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' };
 
-/**
- * SolverForm — PDF Pages 3 & 4
- * Full dynamic state for variables (2–6) and constraints (add/delete).
- * Accepts optional preloaded model from route state (for Solver History reload).
- */
+/* ============================================================
+   Solver Form Component
+   ============================================================ */
 const SolverForm = ({
   solverType = 'LP',
   defaultMethod = null,
@@ -70,6 +76,7 @@ const SolverForm = ({
   );
   const [results, setResults] = useState(preload?.results || null);
   const [error, setError] = useState(null);
+  const [dailyChallengeWarning, setDailyChallengeWarning] = useState(null);
 
   // Clear route state after consuming it so back-navigation won't re-apply
   useEffect(() => {
@@ -159,6 +166,7 @@ const SolverForm = ({
   const handleRun = (e) => {
     e.preventDefault();
     setError(null);
+    setDailyChallengeWarning(null);
     setResults(null);
 
     // Enhanced validation with specific error messages
@@ -196,6 +204,23 @@ const SolverForm = ({
 
     if (validationErrors.length > 0) {
       setError(validationErrors.join('; '));
+      return;
+    }
+
+    // Guard against solving the current active daily challenge in the standard solver
+    const dailyCheck = checkCurrentDailyChallenge(solverType, {
+      isMax,
+      objective,
+      constraints,
+      numVars,
+    });
+
+    if (dailyCheck.isMatch) {
+      setResults(null);
+      setDailyChallengeWarning({
+        title: dailyCheck.title,
+        type: dailyCheck.challengeType,
+      });
       return;
     }
 
@@ -477,6 +502,50 @@ const SolverForm = ({
           RUN ANALYSIS
         </button>
       </div>
+
+      {/* Daily Challenge Warning Banner */}
+      {dailyChallengeWarning && (
+        <div
+          style={{
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1.5px solid #f59e0b',
+            boxShadow: '0 0 15px rgba(245, 158, 11, 0.25)',
+            borderRadius: '8px',
+            padding: '16px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+            fontFamily: 'monospace',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#f59e0b', fontWeight: 'bold', fontSize: '0.92rem', letterSpacing: '0.08em' }}>
+            <span>⚠ RESTRICTED TRANSMISSION — ACTIVE DAILY CHALLENGE DETECTED</span>
+          </div>
+          <div style={{ color: '#fcd34d', fontSize: '0.85rem', lineHeight: 1.5 }}>
+            This model matches today's active <strong>{dailyChallengeWarning.title}</strong>. To preserve challenge integrity, automated solutions for the active daily challenge cannot be computed in the standard solver.
+          </div>
+          <div style={{ color: '#94a3b8', fontSize: '0.78rem' }}>
+            Please compute your solution independently and submit your answers directly on the Daily Challenge terminal. (Past daily challenges from previous days remain fully permitted in the solver).
+          </div>
+          <div style={{ marginTop: '4px' }}>
+            <button
+              type="button"
+              onClick={() => navigate('/challenge')}
+              className="pill-button"
+              style={{
+                borderColor: '#f59e0b',
+                color: '#f59e0b',
+                background: 'rgba(245, 158, 11, 0.15)',
+                fontSize: '0.78rem',
+                padding: '6px 14px',
+                cursor: 'pointer',
+              }}
+            >
+              GO TO DAILY CHALLENGE TERMINAL →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Error */}
       {error && (

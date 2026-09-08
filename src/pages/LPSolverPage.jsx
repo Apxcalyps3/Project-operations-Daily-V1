@@ -1,11 +1,15 @@
+/**
+ * Linear Programming (LP) Solver Page
+ * Displays the retro window container for the LP solver form and tableau results.
+ */
+
 import React from 'react';
 import Navbar from '../components/layout/Navbar';
 import SolverForm from '../components/solver/SolverForm';
 
-/**
- * LPSolverPage — PDF Page 3
- * Retro window with LP SOLVER header and full SolverForm.
- */
+/* ============================================================
+   LP Solver Page Component
+   ============================================================ */
 const LPSolverPage = () => {
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>

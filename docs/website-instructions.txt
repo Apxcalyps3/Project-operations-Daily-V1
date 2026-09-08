@@ -1,65 +1,154 @@
-# OPERATIONS DAILY – PROJECT SPECIFICATIONS
+# OPERATIONS DAILY — SYSTEM SPECIFICATIONS & ARCHITECTURAL REFERENCE
 
-## 1. VISUAL IDENTITY & GLOBAL UI
-- Theme: High-Contrast Retro Green / Cyberpunk.
-- Color Palette: Neon Green (#4ade80), Deep Green (#14532d), True Black (#000000).
-- Centering Logic: Every page MUST be perfectly centered horizontally and vertically in the viewport. If Tailwind flex/grid fails, use standard CSS: { display: flex; justify-content: center; align-items: center; min-height: 100vh; }.
-- Background: Apply 'src/assets/bg-grid.png' to a fixed perspective container. The grid should look like a floor receding into the distance (3D transform).
-- Header: The 'logo-main.png' stays at the top of every page. It is a functional Home Link to '/'.
+## 1. SYSTEM OVERVIEW
+**Operations Daily** is a web-based optimization suite and procedural challenge platform for Operations Research. It delivers interactive mathematical optimization for Linear Programming (LP) and Integer Programming (IP) problems, step-by-step educational tableau derivations, dynamic 2D geometric visualizations, and automated daily challenge generation with solution verification.
 
-## 2. NAVIGATION & FLOWCHART LOGIC
-- Home Page (/): 4 horizontal window buttons (Solver, Challenge, History, Settings).
-- Solver Selection (/solver): 2 horizontal buttons (LP Solver, IP Solver).
-- LP Solver (/solver/lp): Simplex interface. 
-- IP Solver (/solver/ip): Integer programming interface.
-- History Selection (/history): 2 horizontal buttons (Solver History, Challenge History).
-- Settings (/settings): 3 horizontal buttons (Account, Theme, Review).
-- Back Buttons: Every sub-page must have a '< BACK' button that returns to the previous hub in the flowchart.
+### Technology Stack
+* **Runtime & Bundler**: React 18+ with Vite, ES Modules.
+* **Styling**: Tailwind CSS with custom retro CRT scanlines, phosphorus amber/green themes, and monospace typography.
+* **Vector Graphics**: Native SVG 2D Cartesian transformation pipeline with dynamic viewport bounding, pan, and zoom.
+* **Persistence & Backend**: Firebase Authentication and Firestore real-time cloud persistence with transparent guest fallback to local storage.
+* **Mathematical Core**: Proprietary exact rational fraction arithmetic engine (`Fraction` class) supporting symbolic row operations without IEEE-754 floating-point drift.
 
-## 3. SOLVER FUNCTIONAL SPECS
-### A. Input Logic
-- Variable Control: '+' and '-' buttons to set number of variables (2-4). UI must dynamically add/remove input boxes for the Objective Function (Z) and all Constraint rows.
-- Subjective Constraints: Users can add/remove functional constraints. Each row needs a 'Trash' icon to delete.
-- Structural Constraints (Hardcoded & Visible):
-    * Non-Negativity: 'Xn >= 0' must be automatically displayed at the bottom of the list.
-    * Integer Rule: For IP models, 'Xn ∈ ℤ' must be displayed.
-### B. Method Selection
-- LP Solver: Options = DUAL SIMPLEX, BIG M, PRIMAL-DUAL. (Do not limit by Max/Min).
-- IP Solver: Options = CUTTING PLANE, BRANCH & BOUND.
+---
 
-## 4. MATH ENGINE & OUTPUT (EMATHHELP / ATOZMATH STYLE)
-- Step-by-Step Tableaus: The solver must return an array of steps. Users use 'Next/Prev' buttons to flip through them.
-- Tableau Detail: Each step must show a full matrix including Basis, Variables, RHS, and Ratios. Highlight the pivot row/column.
-- Row Operations: For every iteration, display the exact formula used, e.g., 'R2(new) = R2(old) - (value) * R1(pivot)'.
-- Explanations: Provide text for each step identifying entering/leaving variables and the reason for the current pivot.
+## 2. APPLICATION ROUTING & NAVIGATION
+The interface uses a multi-tier window hierarchy with contextual retro navigation bars:
 
-## 5. GRAPHICAL VISUALIZATION (2D ONLY)
-- Match: If variables = 2, show a graph.
-- Aesthetic: Monochromatic Green theme.
-- Interactive: Must be zoomable (scroll) and draggable (pan).
-- Region: Shade the 'Feasible Region' with a semi-transparent green glow. Mark the Optimal Point clearly.
+* **Home Hub (`/`)**: Main selection grid with pixel-art window icons:
+  * `SOLVER` $\to$ `/solver`
+  * `DAILY CHALLENGE` $\to$ `/challenge`
+  * `LOGS / HISTORY` $\to$ `/history`
+  * `SYSTEM SETTINGS` $\to$ `/settings`
+* **Solver Mode Hub (`/solver`)**:
+  * `LP SOLVER` $\to$ `/solver/lp`
+  * `IP SOLVER` $\to$ `/solver/ip`
+* **LP Solver Terminal (`/solver/lp`)**:
+  * Dedicated Linear Programming engine interface.
+  * Supported Methods: `BIG M`, `DUAL SIMPLEX`, `PRIMAL-DUAL`.
+* **IP Solver Terminal (`/solver/ip`)**:
+  * Dedicated Integer Programming engine interface.
+  * Supported Methods: `CUTTING PLANE` (Gomory's method), `BRANCH & BOUND`.
+* **Daily Challenge Hub (`/challenge`)**:
+  * Dual-mode selection terminal for daily procedurally generated `LP` and `IP` problems.
+  * Real-time countdown timer to the next local midnight rollover (`00:00:00`).
+* **History Log Terminal (`/history`)**:
+  * Dual-mode audit view: `SOLVER HISTORY` (manual solver runs) and `CHALLENGE LOGS` (daily challenge completion records).
+  * Feature-rich problem inspection and one-click re-population into the solver.
+* **Settings & Access Hub (`/settings`)**:
+  * User profile management, login/registration dialogs, user credential state, theme indicator, and feedback portal.
 
-## 6. DAILY CHALLENGE ENGINE
-- Seeded Randomization: Generate one unique problem every 24 hours using the date (YYYY-MM-DD) as the random seed.
-- Problem Mix: Randomly select 2-4 variables and 2-4 subjective constraints.
-- UI Bracket: The curly bracket '{' must scale to fit all functional and structural constraints.
-- Timer: A real-time countdown to the next local Midnight (IRL time).
-- Verification: Submit button compares user input to optimal math result. Return: 'Optimal', 'Feasible but not Optimal', or 'Infeasible'.
+---
 
-## 7. FIREBASE & ACCOUNTS
-- Authentication: Use Firebase Email/Password login.
-- Persistence: Use 'onAuthStateChanged' so the user stays logged in after a page refresh.
-- Admin Superuser: 
-    * Email: project.operations.daily@gmail.com
-    * Password: OperationsDaily2026
-    * Logic: This account grants instant access and bypasses standard registration.
-- Firestore: Save all 'Solver History' and 'Challenge History' to Firestore under users/{uid}/history.
+## 3. MATHEMATICAL ENGINES & ALGORITHMS
 
-## 8. SETTINGS & ASSETS
-- Theme: Default = Dark. Clicking 'Light Mode' triggers a 'COMING SOON' transmission overlay.
-- Review: Clicking 'Review' opens a modal showing 'src/assets/icons/icon-feedback.png' (QR Code).
-- Icon Map (Use exact filenames in src/assets/icons/):
-    * icon-solver, icon-challenge, icon-history, icon-settings
-    * icon-lpsolver, icon-ipsolver
-    * icon-dailylp, icon-dailyip
-    * icon-account, icon-theme, icon-review
+### 3.1 Exact Rational Arithmetic (`src/services/fractionUtils.js`)
+* **Fraction Class**: Encapsulates rational numbers as immutable numerator/denominator pairs $(n / d)$ with automated Euclidean Greatest Common Divisor (GCD) reduction.
+* **Continued Fraction Approximation**: Converts user-entered decimals or floating-point intermediate values into exact canonical fractions up to specified precision thresholds.
+* **String Parser**: Seamlessly parses integer (`"5"`), fraction (`"14/5"`), and decimal (`"2.8"`) inputs.
+
+### 3.2 Linear Programming Engines (`src/services/`)
+1. **Big M Simplex (`bigMEngine.js`)**:
+   * Introduces slack variables ($S_i \ge 0$) for $\le$ constraints, surplus variables ($E_i \ge 0$) for $\ge$ constraints, and artificial variables ($A_i \ge 0$) for $=$ and $\ge$ constraints.
+   * Objective penalty: assigns $+M$ (Minimization) or $-M$ (Maximization) coefficients to artificial variables.
+   * Generates step-by-step simplex tableaus with variable basis identification, minimum ratio test quotients, entering/leaving vectors, and explicit row operation formulas (e.g. $R_i \leftarrow R_i - c \cdot R_{pivot}$).
+   * Detects and reports infeasible formulations (artificial variables persisting in optimal basis) and unbounded problems (non-positive pivot columns).
+2. **Dual Simplex (`dualSimplexEngine.js`)**:
+   * Evaluates problems that are dual-feasible but primal-infeasible (negative RHS values).
+   * Identifies the pivot row by finding the most negative RHS, then selects the entering variable via the dual minimum ratio test.
+3. **Primal-Dual Simplex (`primalDualEngine.js`)**:
+   * Automatically formulates the mathematical dual problem, solves the system, and extracts both primal and dual optimal vectors via complementary slackness conditions.
+
+### 3.3 Integer Programming Engines (`src/services/cuttingPlaneEngine.js`)
+1. **Gomory's Fractional Cutting Plane (`solveCuttingPlane`)**:
+   * Solves the continuous LP relaxation to optimality using Big M Simplex.
+   * If non-integer solutions exist for integer-constrained variables, it identifies the basic variable with the largest fractional component $f_0 = b_i - \lfloor b_i \rfloor$.
+   * Generates a Gomory fractional cut constraint: $\sum f_j X_j \ge f_0 \implies - \sum f_j X_j + S_{cut} = -f_0$.
+   * Appends the cut to the tableau and re-optimizes using the Dual Simplex algorithm iteratively until all decision variables are integral.
+2. **Branch and Bound (`solveBranchAndBound`)**:
+   * Executes continuous LP relaxations across a recursive exploration tree.
+   * Identifies non-integer variable candidates $X_k$ with non-zero fractional parts and branches into two disjoint sub-problems: $X_k \le \lfloor X_k \rfloor$ and $X_k \ge \lceil X_k \rceil$.
+   * Tracks global upper/lower bounds, prunes fathomed or infeasible branches, and records all node states into an interactive step-by-step tree visualization.
+
+---
+
+## 4. 2D CARTESIAN GRAPHICAL ENGINE (`src/components/solver/GraphVisualization.jsx`)
+
+* **Activation Threshold**: Automatically mounts whenever decision variable count $n = 2$ ($X_1, X_2$).
+* **SVG Coordinate Transformation**:
+  * Mathematical first-quadrant transformation converting Cartesian space $(X_1, X_2)$ to inverted SVG pixel coordinates $(x, y)$.
+  * Dynamic domain scaling based on constraint axes intercepts and optimal point coordinates.
+* **Visual Elements**:
+  * **Feasible Region Polygon**: Rendered as a semi-transparent luminous green polygon (`#22c55e` with `0.15` opacity).
+  * **Constraint Boundary Lines**: High-contrast multi-color palette (Amber, Cyan, Magenta, Violet, Orange, Emerald) distinguishing each constraint $C_1 \dots C_6$.
+  * **On-Canvas Badges**: Interactive pill tags placed along constraint segments denoting the constraint identifier.
+  * **Optimal Vertex Marker**: Radiant star badge ($\star$) with animated pulse rings and coordinate annotation box displaying exact rational fractions and evaluated decimals.
+  * **Legend Bar**: Formula footer translating each colored line to its exact mathematical constraint equation.
+* **Canvas Interactivity**:
+  * Pan: Click and drag anywhere within the viewport.
+  * Zoom: Mouse wheel scaling centered on cursor coordinates.
+  * Controls: Zoom In, Zoom Out, and Reset Viewport buttons.
+
+---
+
+## 5. DAILY CHALLENGE & GUARD SYSTEM
+
+### 5.1 Procedural Generation Engine
+* **Deterministic Mulberry32 PRNG**: Uses the current date string (`YYYY-MM-DD`) as an integer seed to produce a deterministic model instance per 24-hour cycle.
+* **Model Parameters**:
+  * Random variable dimensions: 2 to 4 decision variables.
+  * Random constraint depth: 2 to 4 subjective constraints with mixed relations ($\le, \ge, =$).
+  * Random objective vector: Maximization or Minimization with non-zero integer coefficients.
+* **Real-Time Countdown**: Live countdown displaying hours, minutes, and seconds until the next local midnight reset.
+
+### 5.2 Automated Verification Pipeline
+* User submissions are verified against the exact mathematical solution computed by the optimization engine:
+  * Objective value tolerance: $|Z_{user} - Z_{optimal}| < 0.01$.
+  * Vector variable tolerance: $|X_{i, user} - X_{i, optimal}| < 0.01$ for all variables.
+* Successful submissions automatically record the date, time, and model snapshot to Firestore and local history.
+
+### 5.3 Active Daily Challenge Guard
+* **Purpose**: Prevents solver cheating by barring automated solution computation for today's active challenge while permitting past challenges.
+* **Scope**: Strictly evaluates against today's active date key (`todayKey()`).
+* **Canonical Signature Matching**:
+  * Evaluates variable count and optimization direction.
+  * Normalizes and compares objective coefficients.
+  * Computes canonical, order-independent signatures for all constraints: `[coefficients]|relation|rhs`.
+  * Matches models even if the user enters constraints in permuted row order or inputs fractional vs. decimal numbers.
+* **Enforcement & Feedback**:
+  * If a match is detected:
+    1. Solver execution is blocked immediately before invoking mathematical engines.
+    2. Any existing results, tableaus, and graphs are cleared (`null`).
+    3. No record is saved to solve history.
+    4. An amber retro-styled warning banner is displayed:
+       `⚠ RESTRICTED TRANSMISSION — ACTIVE DAILY CHALLENGE DETECTED`
+    5. Direct shortcut button provided to navigate to `/challenge`.
+  * **Past Challenges**: Challenges from previous days are exempted and solve normally.
+
+---
+
+## 6. DATA PERSISTENCE & USER ARCHITECTURE
+
+### 6.1 Storage Strategy
+The system operates a dual-tier persistence layer:
+1. **Authenticated Users (Firebase Firestore)**:
+   * Collections:
+     * `users/{uid}/history/{recordId}`: User's manual solver records with full model snapshots, optimal values, and timestamps.
+     * `users/{uid}/challenges/{challengeType_dateKey}`: Challenge completion records with completion timestamps.
+   * State Synchronization: Automatic background reconciliation upon login.
+2. **Guest Users (LocalStorage)**:
+   * Keys: `op_guest_solve_history`, `op_guest_challenge_lp_solved`, `op_guest_challenge_ip_solved`.
+   * Unauthenticated users have full local functionality without requiring an account.
+
+### 6.2 Authentication & Security
+* **Firebase Auth**: Email/password authentication with client-side credential validation ($\ge 6$ character password requirement).
+* **Superuser Administrative Account**:
+  * Email: `project.operations.daily@gmail.com`
+  * Pre-configured administrative privileges and instant verification.
+
+---
+
+## 7. CODEBASE CONVENTIONS & QUALITY STANDARDS
+* **Exact Imports**: Strict ES Module named imports.
+* **Component Modularity**: Separation between layout containers (`Window`, `Navbar`), domain components (`SolverForm`, `TableauDisplay`, `GraphVisualization`), and mathematical services (`*Engine.js`, `fractionUtils.js`).
+* **Clean Code Standards**: No dead code artifacts, obsolete prompt text, or cluttering inline comments. All mathematical transformations and complex logic are documented with concise JSDoc function headers.

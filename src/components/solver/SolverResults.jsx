@@ -1,5 +1,14 @@
+/**
+ * Solver Results Component
+ * Comprehensive display of optimal values, basic variables, shadow prices,
+ * and step-by-step educational tableau progression.
+ */
+
 import React, { useState, useEffect } from 'react';
 
+/* ============================================================
+   Helper Components & Formatters
+   ============================================================ */
 const FractionValue = ({ value }) => {
   if (value === null || value === undefined) return '—';
   const text = String(value).trim();
@@ -34,6 +43,9 @@ const displayVariable = (name) =>
       .join('')
   );
 
+/* ============================================================
+   Solver Results Component
+   ============================================================ */
 const SolverResults = ({ results, isMax }) => {
   const [activeStep, setActiveStep] = useState(0);
 

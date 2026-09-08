@@ -1,9 +1,17 @@
+/**
+ * Authentication Modal Component
+ * Handles login, registration, and active user profile sign-out flows.
+ */
+
 import React, { useState } from 'react';
 import Window from '../layout/Window';
 import iconSignup from '../../assets/icons/icon-signup.png';
 import iconLogin from '../../assets/icons/icon-login.png';
 import { useAuth } from '../../context/AuthContext';
 
+/* ============================================================
+   Auth Modal Component
+   ============================================================ */
 const AuthModal = ({ onClose }) => {
   const { user, login, signup, logout } = useAuth();
   const [mode, setMode] = useState(null); // 'login' or 'signup'
@@ -17,8 +25,8 @@ const AuthModal = ({ onClose }) => {
       setMsg('Please provide an email/username.');
       return;
     }
-    if (password.length < 4) {
-      setMsg('ACCESS CODE MUST HAVE AT LEAST 4 CHARACTERS.');
+    if (password.length < 6) {
+      setMsg('ACCESS CODE MUST HAVE AT LEAST 6 CHARACTERS.');
       return;
     }
     

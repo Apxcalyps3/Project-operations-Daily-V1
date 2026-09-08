@@ -1,6 +1,14 @@
+/**
+ * Challenge Submission Form Component
+ * Form input for user solution values (Z and decision variables) with instant validation feedback.
+ */
+
 import React, { useState } from 'react';
 import btnBg from '../../assets/icons/btn-bg.png';
 
+/* ============================================================
+   Submission Form Component
+   ============================================================ */
 const SubmissionForm = ({ numVars = 2, onSubmitSolution }) => {
   const [zVal, setZVal] = useState('');
   const [vars, setVars] = useState(() => new Array(numVars).fill(''));

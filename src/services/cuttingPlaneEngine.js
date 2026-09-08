@@ -3,15 +3,15 @@
  * 1. Cutting Plane (Gomory's Fractional Cutting Plane Method)
  * 2. Branch and Bound
  * Generates educational step-by-step tableaus, Gomory cut derivations, dual pivots,
- * row operations, and clear explanations (emathhelp.net style).
+ * row operations, and clear explanations.
  */
 
 import { Fraction, toFraction, formatRowOp } from './fractionUtils.js';
 import { solveBigM } from './bigMEngine.js';
 
-/**
- * Gomory's Fractional Cutting Plane Solver
- */
+/* ============================================================
+   1. Gomory's Fractional Cutting Plane Solver
+   ============================================================ */
 export function solveCuttingPlane({ isMax = true, objective = [], constraints = [] }) {
   // 1. Solve initial continuous LP relaxation using robust Big-M
   const lpResult = solveBigM({ isMax, objective, constraints });
@@ -129,7 +129,7 @@ export function solveCuttingPlane({ isMax = true, objective = [], constraints = 
     // Cut slack variable has coefficient +1
     cutRow[newColHeaders.length - 2] = new Fraction(1, 1);
 
-    // Cut RHS is -f_0 (negative!)
+    // Cut RHS is -f_0 (negative)
     const f_0 = target.fractionalPart;
     cutRow[newColHeaders.length - 1] = f_0.neg();
 
@@ -139,7 +139,7 @@ export function solveCuttingPlane({ isMax = true, objective = [], constraints = 
       const oldRow = currentTableau[i];
       const newRow = [
         ...oldRow.slice(0, rhsColIdx),
-        new Fraction(0, 1), // 0 in existing rows for new slack
+        new Fraction(0, 1),
         oldRow[rhsColIdx],
       ];
       augmentedTableau.push(newRow);
@@ -155,7 +155,7 @@ export function solveCuttingPlane({ isMax = true, objective = [], constraints = 
       'Z',
     ];
 
-    const newCutRowIdx = zRowIdx; // index of the newly added cut row
+    const newCutRowIdx = zRowIdx;
     const cutEquationStr = `${cutCoeffsText.join(' + ')} ≥ ${f_0.toDisplayString()} ⇒ -[${cutCoeffsText.join(' + ')}] + ${cutSlackName} = -${f_0.toDisplayString()}`;
 
     // Step: Gomory Cut Introduced
@@ -174,8 +174,7 @@ export function solveCuttingPlane({ isMax = true, objective = [], constraints = 
       isOptimal: false,
     });
 
-    // Dual Simplex Pivot on the Cut Row:
-    // Pivot row is the newly added cut row (negative RHS)
+    // Dual Simplex Pivot on the Cut Row
     const pivotRow = newCutRowIdx;
     const enteringColRatios = [];
     let pivotCol = -1;
@@ -315,7 +314,7 @@ export function solveCuttingPlane({ isMax = true, objective = [], constraints = 
     variables[varName] = rowIdx !== -1 ? currentTableau[rowIdx][rhsIdx].toDisplayString() : '0';
   }
 
-  // Exact optimal Z calculation from decision variables: Z* = sum(c_j * X_j*)
+  // Exact optimal Z calculation from decision variables
   let zFinal = new Fraction(0, 1);
   for (let j = 0; j < numVars; j++) {
     const xVal = toFraction(variables[`X${j + 1}`]);
@@ -333,9 +332,9 @@ export function solveCuttingPlane({ isMax = true, objective = [], constraints = 
   };
 }
 
-/**
- * Branch and Bound Solver with step-by-step node tree tableaus and bounding explanations
- */
+/* ============================================================
+   2. Branch and Bound Solver
+   ============================================================ */
 export function solveBranchAndBound({ isMax = true, objective = [], constraints = [] }) {
   const result = solveCuttingPlane({ isMax, objective, constraints });
   if (result.status === 'Unbounded' || result.status === 'Infeasible') {

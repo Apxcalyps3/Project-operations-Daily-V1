@@ -1,5 +1,13 @@
+/**
+ * Feedback Form Component
+ * Form for submitting ratings and user review transmission.
+ */
+
 import React, { useState } from 'react';
 
+/* ============================================================
+   Feedback Form Component
+   ============================================================ */
 const FeedbackForm = () => {
   const [rating, setRating] = useState(5);
   const [comments, setComments] = useState('');

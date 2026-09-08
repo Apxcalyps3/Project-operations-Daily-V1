@@ -1,10 +1,14 @@
+/**
+ * Navigation Bar Component
+ * Back-navigation button rendered across sub-pages and modal views.
+ */
+
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-/**
- * Navbar — back-navigation button shown on all non-home pages.
- * backTo: string path OR a callback function (for in-page state navigation).
- */
+/* ============================================================
+   Navbar Component
+   ============================================================ */
 const Navbar = ({ backTo = '/', label = 'RETURN TO SYSTEM' }) => {
   const navigate = useNavigate();
   const location = useLocation();

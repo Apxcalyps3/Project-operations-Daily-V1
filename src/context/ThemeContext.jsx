@@ -1,7 +1,15 @@
+/**
+ * Theme Context
+ * Manages active theme state (dark/light/matrix) and persists to localStorage.
+ */
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const ThemeContext = createContext();
 
+/* ============================================================
+   Theme Provider
+   ============================================================ */
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem('op_theme') || 'dark';
@@ -23,4 +31,8 @@ export const ThemeProvider = ({ children }) => {
   );
 };
 
+/* ============================================================
+   Hook
+   ============================================================ */
 export const useTheme = () => useContext(ThemeContext);
+

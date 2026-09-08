@@ -1,3 +1,8 @@
+/**
+ * Settings Page
+ * Provides access to User Account modal, Theme preferences, and Feedback QR code panel.
+ */
+
 import React, { useState } from 'react';
 import Window from '../components/layout/Window';
 import Navbar from '../components/layout/Navbar';
@@ -10,11 +15,9 @@ import iconThemed from '../assets/icons/icon-themed.png';
 import iconThemel from '../assets/icons/icon-themel.png';
 import qrImage from '../assets/icons/icon-feedback.png';
 
-/* ─────────────────────────────────────────────────
-   ThemePanel — PDF Page 13
-   Dark Mode = default active
-   Light Mode click = COMING SOON overlay
-───────────────────────────────────────────────── */
+/* ============================================================
+   Theme Panel Component
+   ============================================================ */
 const ThemePanel = () => {
   const [showComingSoon, setShowComingSoon] = useState(false);
 
@@ -26,7 +29,7 @@ const ThemePanel = () => {
           <Window
             iconSrc={iconThemed}
             altText="Dark Theme"
-            onClick={() => {}} // already active
+            onClick={() => {}}
           />
           <div style={{
             marginTop: '10px', fontSize: '0.78rem', fontWeight: 700, letterSpacing: '0.12em',
@@ -36,7 +39,7 @@ const ThemePanel = () => {
           </div>
         </div>
 
-        {/* Light Theme — COMING SOON */}
+        {/* Light Theme */}
         <div style={{ textAlign: 'center' }}>
           <Window
             iconSrc={iconThemel}
@@ -52,7 +55,6 @@ const ThemePanel = () => {
         </div>
       </div>
 
-      {/* Coming Soon Overlay — matches PDF Page 13 */}
       {showComingSoon && (
         <div
           className="modal-overlay"
@@ -92,10 +94,9 @@ const ThemePanel = () => {
   );
 };
 
-/* ─────────────────────────────────────────────────
-   FeedbackPanel — PDF Page 14
-   Displays the FEEDBACK window with QR code
-───────────────────────────────────────────────── */
+/* ============================================================
+   Feedback Panel Component
+   ============================================================ */
 const FeedbackPanel = () => {
   return (
     <div className="retro-window" style={{ maxWidth: '420px' }}>
@@ -128,12 +129,11 @@ const FeedbackPanel = () => {
   );
 };
 
-/* ─────────────────────────────────────────────────
-   SettingsPage — PDF Page 11
-   3 cards: ACCOUNT · THEME · REVIEW
-───────────────────────────────────────────────── */
+/* ============================================================
+   Settings Page Component
+   ============================================================ */
 const SettingsPage = () => {
-  const [view, setView] = useState(null); // null | 'account' | 'theme' | 'review'
+  const [view, setView] = useState(null);
 
   return (
     <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -143,7 +143,6 @@ const SettingsPage = () => {
       />
 
       {!view ? (
-        /* Settings Selection — 3 cards in a row */
         <div className="settings-grid">
           <Window
             iconSrc={iconAccount}
@@ -166,7 +165,6 @@ const SettingsPage = () => {
       ) : view === 'theme' ? (
         <ThemePanel />
       ) : (
-        /* Review = Feedback QR (Page 14) */
         <FeedbackPanel />
       )}
     </div>

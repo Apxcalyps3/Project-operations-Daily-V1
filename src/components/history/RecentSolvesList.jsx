@@ -1,6 +1,14 @@
+/**
+ * Recent Solves List Component
+ * Simple list rendering of previously executed solver models.
+ */
+
 import React, { useState, useEffect } from 'react';
 import { getSolveHistory } from '../../services/api';
 
+/* ============================================================
+   Recent Solves List Component
+   ============================================================ */
 const RecentSolvesList = () => {
   const [history, setHistory] = useState([]);
 

@@ -1,23 +1,25 @@
-import React, { useMemo } from 'react';
-
 /**
  * RetroGrid Component
- * Recreates the authentic 3D perspective neon green wireframe grid floor
- * against a pitch-black void sky, matching bg-grid.png and image.png.
- * 
- * Stays permanently fixed to the viewport across all page navigations.
+ * Recreates the 3D perspective neon wireframe grid floor against a dark background.
+ * Stays permanently fixed to the viewport across page navigations.
  */
+
+import React, { useMemo } from 'react';
+
+/* ============================================================
+   RetroGrid Canvas Component
+   ============================================================ */
 const RetroGrid = () => {
-  const HORIZON_Y = 520; // Horizon divide between black sky and grid floor
+  const HORIZON_Y = 520;
   const BOTTOM_Y = 1080;
   const CENTER_X = 960;
   const WIDTH = 1920;
-  const VANISH_Y = 300; // Vanishing point placed well above the horizon
+  const VANISH_Y = 300;
 
   // Transverse (horizontal) lines with geometric perspective foreshortening
   const horizontalLines = useMemo(() => {
     const lines = [];
-    const dist = BOTTOM_Y - VANISH_Y; // 780
+    const dist = BOTTOM_Y - VANISH_Y;
 
     for (let k = 0; k <= 25; k++) {
       const z = 1 + k * 0.22;
@@ -39,9 +41,9 @@ const RetroGrid = () => {
   // Longitudinal (perspective depth) lines crossing the horizon evenly
   const longitudinalLines = useMemo(() => {
     const lines = [];
-    const stepTop = 32; // Even spacing across the horizon (eliminates pyramid effect)
-    const stepBottom = 240; // Wide perspective spacing at the foreground
-    const maxM = 36; // Spans full viewport width and beyond
+    const stepTop = 32;
+    const stepBottom = 240;
+    const maxM = 36;
 
     for (let m = -maxM; m <= maxM; m++) {
       const x1 = CENTER_X + m * stepTop;
@@ -100,10 +102,10 @@ const RetroGrid = () => {
           </clipPath>
         </defs>
 
-        {/* Pitch Black Void Sky */}
+        {/* Dark sky background */}
         <rect x="0" y="0" width={WIDTH} height={BOTTOM_Y} fill="#000000" />
 
-        {/* Uniform linear glow directly beneath the horizon */}
+        {/* Horizon glow */}
         <rect
           x="0"
           y={HORIZON_Y}
@@ -114,7 +116,6 @@ const RetroGrid = () => {
 
         {/* 3D Perspective Wireframe Floor */}
         <g clipPath="url(#retro-floor-clip)" filter="url(#retro-neon-glow)">
-          {/* Longitudinal radiating lines with clean flat horizon distribution */}
           {longitudinalLines.map((line) => (
             <line
               key={`long-${line.m}`}
@@ -128,7 +129,6 @@ const RetroGrid = () => {
             />
           ))}
 
-          {/* Transverse horizontal lines */}
           {horizontalLines.map((line, idx) => (
             <line
               key={`lat-${idx}`}
@@ -143,7 +143,7 @@ const RetroGrid = () => {
           ))}
         </g>
 
-        {/* Sharp Glowing Horizon Boundary Line */}
+        {/* Horizon Boundary Line */}
         <line
           x1="0"
           y1={HORIZON_Y}

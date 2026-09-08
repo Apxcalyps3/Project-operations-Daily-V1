@@ -1,11 +1,14 @@
 /**
  * Dual Simplex Engine for Linear Programming
  * Generates complete educational step-by-step tableaus, dual ratio tests,
- * row operations, and explanations (emathhelp.net style).
+ * row operations, and explanations.
  */
 
 import { Fraction, toFraction, formatRowOp } from './fractionUtils.js';
 
+/* ============================================================
+   Dual Simplex Algorithm Solver
+   ============================================================ */
 export function solveDualSimplex({ isMax = false, objective = [], constraints = [] }) {
   const steps = [];
   const numVars = objective.length;
@@ -15,6 +18,9 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
     return { error: 'Please provide valid objective and constraints.' };
   }
 
+  /* ------------------------------------------------------------
+     1. Parsing & Standardization to <= Inequalities
+     ------------------------------------------------------------ */
   const c = objective.map((val) => toFraction(val));
   const A = constraints.map((row) =>
     Array.from({ length: numVars }, (_, j) => toFraction(row.coefficients?.[j] ?? 0))
@@ -22,8 +28,7 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
   const b = constraints.map((row) => toFraction(row.rhs ?? 0));
   const rels = constraints.map((row) => row.relation || '<=');
 
-  // Convert constraints to standard <= form for dual simplex
-  // If >=, multiply row by -1
+  // Convert constraints to standard <= form for dual simplex: if >=, multiply row by -1
   for (let i = 0; i < numConstraints; i++) {
     if (rels[i] === '>=') {
       b[i] = b[i].neg();
@@ -43,6 +48,9 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
     'RHS',
   ];
 
+  /* ------------------------------------------------------------
+     2. Initial Tableau Setup
+     ------------------------------------------------------------ */
   let tableau = [];
   const basicVars = [];
 
@@ -86,6 +94,9 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
     isOptimal: false,
   });
 
+  /* ------------------------------------------------------------
+     3. Dual Simplex Iterations
+     ------------------------------------------------------------ */
   const MAX_ITERATIONS = 40;
   let iteration = 0;
 
@@ -106,7 +117,7 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
       }
     }
 
-    // If no negative RHS, primal feasibility reached! Current solution is optimal.
+    // If no negative RHS, primal feasibility reached (optimal)
     if (pivotRow === -1) {
       steps[steps.length - 1].isOptimal = true;
       steps[steps.length - 1].explanation += ' All RHS values are non-negative (≥ 0). Primal feasibility and dual optimality have both been satisfied!';
@@ -143,7 +154,7 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
       }
     }
 
-    // If no a_rj < 0, the problem has no feasible solution!
+    // If no a_rj < 0, the problem has no feasible solution
     if (pivotCol === -1) {
       const infeasibleStep = {
         stepIndex: steps.length,
@@ -253,6 +264,9 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
     });
   }
 
+  /* ------------------------------------------------------------
+     4. Solution Extraction
+     ------------------------------------------------------------ */
   const variables = {};
   for (let j = 0; j < numVars; j++) {
     const varName = `X${j + 1}`;
@@ -260,7 +274,7 @@ export function solveDualSimplex({ isMax = false, objective = [], constraints = 
     variables[varName] = rowIdx !== -1 ? tableau[rowIdx][totalCols - 1].toDisplayString() : '0';
   }
 
-  // Exact optimal Z calculation from decision variables: Z* = sum(c_j * X_j*)
+  // Exact optimal Z calculation from decision variables
   let computedZ = new Fraction(0, 1);
   for (let j = 0; j < numVars; j++) {
     const xVal = toFraction(variables[`X${j + 1}`]);

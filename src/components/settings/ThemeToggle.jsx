@@ -1,9 +1,17 @@
+/**
+ * Theme Toggle Component
+ * Provides interactive switches between Dark and Light visual themes.
+ */
+
 import React from 'react';
 import Window from '../layout/Window';
 import iconThemed from '../../assets/icons/icon-themed.png';
 import iconThemel from '../../assets/icons/icon-themel.png';
 import { useTheme } from '../../context/ThemeContext';
 
+/* ============================================================
+   Theme Toggle Component
+   ============================================================ */
 const ThemeToggle = () => {
   const { theme, toggleTheme } = useTheme();
 

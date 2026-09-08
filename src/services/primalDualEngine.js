@@ -1,5 +1,5 @@
 /**
- * Primal-Dual Linear Programming Solver Engine (ATOZMATH & EMATHHELP Standard)
+ * Primal-Dual Linear Programming Solver Engine
  *
  * Solves a Linear Program by formulating and stepping through its Dual LP:
  * 1. Formulates the mathematical Dual Problem.
@@ -9,6 +9,9 @@
 
 import { Fraction, toFraction, formatRowOp } from './fractionUtils.js';
 
+/* ============================================================
+   Primal-Dual Simplex Algorithm Solver
+   ============================================================ */
 export function solvePrimalDual({ isMax = false, objective = [], constraints = [] }) {
   const steps = [];
   const numVars = objective.length;
@@ -18,6 +21,9 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
     return { error: 'Please provide valid objective and constraints.' };
   }
 
+  /* ------------------------------------------------------------
+     1. Primal Standardization to Canonical Form
+     ------------------------------------------------------------ */
   const c = objective.map((val) => toFraction(val));
   const rawA = constraints.map((row) =>
     Array.from({ length: numVars }, (_, j) => toFraction(row.coefficients?.[j] ?? 0))
@@ -25,7 +31,7 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
   const rawB = constraints.map((row) => toFraction(row.rhs ?? 0));
   const rels = constraints.map((row) => row.relation || '<=');
 
-  // Standardize Primal to canonical form:
+  // Standardize Primal:
   // For Max: standard is A X <= b (if >=, multiply by -1)
   // For Min: standard is A X >= b (if <=, multiply by -1)
   const stdA = rawA.map((r) => r.map((cell) => new Fraction(cell.n, cell.d)));
@@ -45,18 +51,15 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
     }
   }
 
-  // Dual Problem Formulation:
-  // Dual variables: Y1, Y2, ..., Ym (one per primal constraint)
-  // If Primal is Min Z = c^T X s.t. A X >= b, X >= 0:
-  //   Dual is Max W = b^T Y s.t. A^T Y <= c, Y >= 0
-  // If Primal is Max Z = c^T X s.t. A X <= b, X >= 0:
-  //   Dual is Min W = b^T Y s.t. A^T Y >= c, Y >= 0 (standardized as -A^T Y + S = -c)
-  const dualNumVars = numConstraints; // Y1..Ym
-  const dualNumConstraints = numVars; // S1..Sn (one per primal var X_j)
-  const dualC = stdB.map((val) => new Fraction(val.n, val.d)); // Dual objective coeffs
-  const dualB = c.map((val) => new Fraction(val.n, val.d));     // Dual constraint RHS
+  /* ------------------------------------------------------------
+     2. Dual Problem Formulation & Matrix Transposition
+     ------------------------------------------------------------ */
+  const dualNumVars = numConstraints;
+  const dualNumConstraints = numVars;
+  const dualC = stdB.map((val) => new Fraction(val.n, val.d));
+  const dualB = c.map((val) => new Fraction(val.n, val.d));
 
-  // Transpose A to get dual constraint matrix A^T (size: dualNumConstraints x dualNumVars)
+  // Transpose A to get dual constraint matrix A^T
   const dualA = [];
   for (let j = 0; j < dualNumConstraints; j++) {
     const row = [];
@@ -66,7 +69,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
     dualA.push(row);
   }
 
-  // Step 0: Primal-Dual Formulation Overview
   const primalObjStr = `${isMax ? 'Max' : 'Min'} Z = ` +
     c.map((val, j) => `${val.toDisplayString()} X${j + 1}`).join(' + ');
   const dualObjStr = `${!isMax ? 'Max' : 'Min'} W = ` +
@@ -90,21 +92,22 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
   const formatTableauValues = (tab) =>
     tab.map((r) => r.map((cell) => cell.toDisplayString()));
 
+  /* ------------------------------------------------------------
+     3. Dual Tableau Construction & Optimization Loop
+     ------------------------------------------------------------ */
   if (isMax) {
     // Primal Max -> Dual is Min W = b^T Y s.t. A^T Y >= c
-    // In standard dual simplex tableau form: -A^T Y + S = -c
     for (let j = 0; j < dualNumConstraints; j++) {
       const row = new Array(totalCols).fill(null).map(() => new Fraction(0, 1));
       for (let i = 0; i < dualNumVars; i++) {
         row[i] = dualA[j][i].neg();
       }
-      row[dualNumVars + j] = new Fraction(1, 1); // Slack S_j
-      row[totalCols - 1] = dualB[j].neg();       // -c_j
+      row[dualNumVars + j] = new Fraction(1, 1);
+      row[totalCols - 1] = dualB[j].neg();
       tableau.push(row);
       basicVars.push(`S${j + 1}`);
     }
 
-    // Objective Row W: Min W = sum b_i Y_i -> indicators in W-row are +b_i
     const wRow = new Array(totalCols).fill(null).map(() => new Fraction(0, 1));
     for (let i = 0; i < dualNumVars; i++) {
       wRow[i] = dualC[i];
@@ -128,7 +131,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
       isOptimal: false,
     });
 
-    // Dual Simplex Iterations on the Dual LP
     const MAX_ITERATIONS = 40;
     let iteration = 0;
 
@@ -138,6 +140,7 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
       // 1. Leaving row: most negative RHS
       let pivotRow = -1;
       let minRhs = new Fraction(0, 1);
+
       for (let i = 0; i < dualNumConstraints; i++) {
         const rhs = tableau[i][totalCols - 1];
         if (rhs.isNegative() && (pivotRow === -1 || rhs.sub(minRhs).isNegative())) {
@@ -219,7 +222,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
       prevStep.ratios = ratioDetails;
       prevStep.explanation += ` Dual pivot: Leaving variable ${leavingVarName} (most negative RHS = ${minRhs.toDisplayString()}). Entering variable ${enteringVarName} (min dual ratio = ${minDualRatio.toDisplayString()}). Pivot element: (${leavingVarName}, ${enteringVarName}) = ${pivotVal.toDisplayString()}.`;
 
-      // Row Operations
       const rowOps = [];
       const pivotRowLabel = `R${pivotRow + 1}`;
       if (pivotVal.toString() !== '1') {
@@ -239,7 +241,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
       const wOp = formatRowOp('RW', wFactor, pivotRowLabel);
       if (wOp) rowOps.push(wOp);
 
-      // Gauss-Jordan elimination
       const newTableau = tableau.map((r) => r.map((cell) => new Fraction(cell.n, cell.d)));
       for (let j = 0; j < totalCols; j++) {
         newTableau[pivotRow][j] = newTableau[pivotRow][j].div(pivotVal);
@@ -284,13 +285,12 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
       for (let i = 0; i < dualNumVars; i++) {
         row[i] = dualA[j][i];
       }
-      row[dualNumVars + j] = new Fraction(1, 1); // Slack S_j
+      row[dualNumVars + j] = new Fraction(1, 1);
       row[totalCols - 1] = dualB[j];
       tableau.push(row);
       basicVars.push(`S${j + 1}`);
     }
 
-    // Objective Row W: Max W = sum b_i Y_i -> indicators are -b_i
     const zRow = new Array(totalCols).fill(null).map(() => new Fraction(0, 1));
     for (let i = 0; i < dualNumVars; i++) {
       zRow[i] = dualC[i].neg();
@@ -312,7 +312,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
       isOptimal: false,
     });
 
-    // Primal Simplex Loop on Dual
     const MAX_ITERATIONS = 40;
     let iteration = 0;
 
@@ -458,7 +457,9 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
     }
   }
 
-  // Extract Dual Variables (Y_i)
+  /* ------------------------------------------------------------
+     4. Solution Extraction via Complementary Slackness
+     ------------------------------------------------------------ */
   const dualVariables = {};
   for (let i = 0; i < dualNumVars; i++) {
     const yName = `Y${i + 1}`;
@@ -466,9 +467,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
     dualVariables[yName] = rowIdx !== -1 ? tableau[rowIdx][totalCols - 1].toDisplayString() : '0';
   }
 
-  // Extract Primal Variables (X_j) via Complementary Slackness:
-  // In the optimal Dual tableau, the coefficient in row W under the dual slack column S_j
-  // gives the optimal primal variable value X_j*!
   const variables = {};
   for (let j = 0; j < numVars; j++) {
     const varName = `X${j + 1}`;
@@ -477,7 +475,6 @@ export function solvePrimalDual({ isMax = false, objective = [], constraints = [
     variables[varName] = xVal.toDisplayString();
   }
 
-  // Exact optimal Z* calculation: Z* = sum(c_j * X_j*)
   let computedZ = new Fraction(0, 1);
   for (let j = 0; j < numVars; j++) {
     const xVal = toFraction(variables[`X${j + 1}`]);

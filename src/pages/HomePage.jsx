@@ -1,3 +1,8 @@
+/**
+ * Home Page
+ * Main dashboard navigation providing entry points to Solver, Daily Challenge, History, and Settings.
+ */
+
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Window from '../components/layout/Window';
@@ -7,11 +12,9 @@ import iconChallenge from '../assets/icons/icon-challenge.png';
 import iconHistory from '../assets/icons/icon-history.png';
 import iconSettings from '../assets/icons/icon-settings.png';
 
-/**
- * HomePage — Page 1 of PDF
- * 4 icon cards in a single horizontal row:
- * [SIMPLEX SOLVER] [DAILY CHALLENGE] [HISTORY] [SETTINGS]
- */
+/* ============================================================
+   Home Page Component
+   ============================================================ */
 const HomePage = () => {
   const navigate = useNavigate();
 

@@ -1,5 +1,13 @@
+/**
+ * Objective Function Component
+ * Inputs for optimization direction (MAX/MIN) and linear objective coefficients.
+ */
+
 import React from 'react';
 
+/* ============================================================
+   Objective Function Component
+   ============================================================ */
 const ObjectiveFunction = ({ isMax, setIsMax, numVars, coefficients, onChangeCoeff }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>

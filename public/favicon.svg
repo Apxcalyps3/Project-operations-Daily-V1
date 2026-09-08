@@ -1,16 +1,45 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <style>
-      .green { fill: #5E9B79; }
-      .serif-font { font-family: 'Times New Roman', 'Baskerville', 'Georgia', serif; }
+      .brand-green { fill: #609A76; }
     </style>
   </defs>
-  <!-- Outer C ring -->
-  <path class="green" d="M 50,4 C 24.6,4 4,24.6 4,50 C 4,75.4 24.6,96 50,96 C 73.5,96 93,78 95.8,55 L 83.2,55 C 80.6,71.2 66.8,83.5 50,83.5 C 31.5,83.5 16.5,68.5 16.5,50 C 16.5,31.5 31.5,16.5 50,16.5 C 66.8,16.5 80.6,28.8 83.2,45 L 95.8,45 C 93,22 73.5,4 50,4 Z" />
-  
-  <!-- Central D curve -->
-  <path class="green" d="M 39,26 C 65,26 89,35 89,50 C 89,65 65,74 39,74 L 39,70 C 60,70 82,62 82,50 C 82,38 60,30 39,30 Z" />
-  
-  <!-- Serif Pillar I -->
-  <path class="green" d="M 38,16 L 68,16 L 68,22 L 57,22 L 57,78 L 68,78 L 68,84 L 38,84 L 38,78 L 49,78 L 49,22 L 38,22 Z" />
+
+  <!-- 1. Outer C Ring (Left Crescent) -->
+  <!-- Outer circle radius 236 centered at (256, 256), thickness ~62px on left, tapering slightly near terminals -->
+  <path class="brand-green" d="
+    M 440, 120
+    A 236 236 0 1 0 440, 392
+    L 398, 360
+    A 180 180 0 1 1 398, 152
+    Z
+  " />
+
+  <!-- 2. Central Serif Pillar 'I' -->
+  <!-- Top and bottom bracketed Roman serifs with central vertical column -->
+  <path class="brand-green" d="
+    M 198, 76
+    L 314, 76
+    C 314, 98 306, 110 280, 114
+    L 280, 398
+    C 306, 402 314, 414 314, 436
+    L 198, 436
+    C 198, 414 206, 402 232, 398
+    L 232, 114
+    C 206, 110 198, 98 198, 76
+    Z
+  " />
+
+  <!-- 3. Curved Lobe 'D' -->
+  <!-- Typographic stroke modulation: starts thin (~16px) at top junction with 'I',
+       swells to ~46px at outer right apex, and thins back down to ~16px at bottom junction -->
+  <path class="brand-green" d="
+    M 256, 126
+    C 336, 126 438, 160 442, 256
+    C 438, 352 336, 386 256, 386
+    L 256, 364
+    C 328, 364 394, 330 396, 256
+    C 394, 182 328, 148 256, 148
+    Z
+  " />
 </svg>

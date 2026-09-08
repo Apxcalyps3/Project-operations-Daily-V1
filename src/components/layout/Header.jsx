@@ -1,7 +1,15 @@
+/**
+ * Application Header
+ * Displays the main branded banner logo and responsive challenge timer.
+ */
+
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import logoMain from '../../assets/logo-main.png';
 
+/* ============================================================
+   Header Component
+   ============================================================ */
 const Header = () => {
   const location = useLocation();
   const isChallenge = location.pathname.startsWith('/challenge');
@@ -27,7 +35,7 @@ const Header = () => {
             letterSpacing: '0.15em',
             color: '#4ade80',
             textShadow: '0 0 10px rgba(74, 222, 128, 0.7)',
-            display: 'none' // will appear responsively on larger screens
+            display: 'none'
           }}
           className="challenge-header-clock sm:block"
         >

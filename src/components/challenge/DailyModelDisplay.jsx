@@ -1,5 +1,13 @@
+/**
+ * Daily Model Display Component
+ * Renders mathematical formulation of the daily optimization problem including objective and constraints.
+ */
+
 import React from 'react';
 
+/* ============================================================
+   Daily Model Formulation Component
+   ============================================================ */
 const DailyModelDisplay = ({ model }) => {
   if (!model) return null;
 
@@ -15,7 +23,7 @@ const DailyModelDisplay = ({ model }) => {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Big Curly Brace */}
+          {/* Curly brace styling for constraint block */}
           <div
             style={{
               fontSize: '4.5rem',

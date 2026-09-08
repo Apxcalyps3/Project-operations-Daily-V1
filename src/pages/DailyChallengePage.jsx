@@ -1,3 +1,8 @@
+/**
+ * Daily Challenge Page
+ * Provides daily LP and IP challenges with procedural models, countdown timer, and automated solution verification.
+ */
+
 import React, { useState } from 'react';
 import Window from '../components/layout/Window';
 import Navbar from '../components/layout/Navbar';
@@ -13,14 +18,20 @@ import { solveSimplex } from '../services/simplexEngine';
 import { solveCuttingPlane } from '../services/cuttingPlaneEngine';
 import { toFraction } from '../services/fractionUtils';
 
+/* ============================================================
+   Helper Functions
+   ============================================================ */
 const todayKey = () => {
   const date = new Date();
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 };
 
+/* ============================================================
+   Daily Challenge Component
+   ============================================================ */
 const DailyChallengePage = () => {
   const { user } = useAuth();
-  const [selectedChallenge, setSelectedChallenge] = useState(null); // 'LP' or 'IP'
+  const [selectedChallenge, setSelectedChallenge] = useState(null);
 
   const dateStr = todayKey();
   const activeModel = selectedChallenge === 'LP' ? getDailyLPModel(dateStr) : selectedChallenge === 'IP' ? getDailyIPModel(dateStr) : null;
@@ -57,7 +68,6 @@ const DailyChallengePage = () => {
       />
 
       {!selectedChallenge ? (
-        /* Page 5: Daily Challenge Selection */
         <div className="solver-grid">
           <Window
             iconSrc={iconDailyLP}
@@ -71,7 +81,6 @@ const DailyChallengePage = () => {
           />
         </div>
       ) : (
-        /* Pages 9 & 10: Daily Model Challenge View */
         <div className="retro-window" style={{ maxWidth: '920px' }}>
           <div className="retro-window-header" style={{ justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>

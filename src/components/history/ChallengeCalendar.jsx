@@ -1,7 +1,15 @@
+/**
+ * Challenge Calendar Component
+ * Renders the dual Daily LP and Daily IP challenge tracking calendars.
+ */
+
 import React from 'react';
 import { CalendarSection } from '../../pages/HistoryPage';
 import { useAuth } from '../../context/AuthContext';
 
+/* ============================================================
+   Challenge Calendar Component
+   ============================================================ */
 const ChallengeCalendar = () => {
   const { user } = useAuth();
 

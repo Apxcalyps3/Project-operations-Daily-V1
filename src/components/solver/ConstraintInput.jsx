@@ -1,5 +1,13 @@
+/**
+ * Constraint Input Row Component
+ * Form row representing a single linear constraint with coefficients, relation, and RHS.
+ */
+
 import React from 'react';
 
+/* ============================================================
+   Constraint Input Component
+   ============================================================ */
 const ConstraintInput = ({
   index,
   numVars,

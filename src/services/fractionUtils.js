@@ -1,11 +1,11 @@
 /**
  * Exact Fraction / Rational Number utilities for Linear & Integer Programming engines.
- * Enables exact tableau arithmetic and clean fraction formatting (emathhelp.net style).
+ * Enables exact tableau arithmetic and clean fraction formatting.
  */
 
-// Debug flag for fraction operations - set to false for production
-const DEBUG_FRACTIONS = false;
-
+/* ============================================================
+   1. Helper Functions
+   ============================================================ */
 function gcd(a, b) {
   let x = Math.abs(a);
   let y = Math.abs(b);
@@ -17,6 +17,9 @@ function gcd(a, b) {
   return x;
 }
 
+/* ============================================================
+   2. Fraction Class Definition
+   ============================================================ */
 export class Fraction {
   constructor(n = 0, d = 1) {
     if (typeof n === 'string') {
@@ -35,6 +38,8 @@ export class Fraction {
       }
     } else if (n instanceof Fraction) {
       return new Fraction(n.n, n.d);
+    } else if (typeof n === 'number' && !Number.isInteger(n) && d === 1) {
+      return Fraction.fromFloat(n);
     }
 
     if (!Number.isFinite(n) || !Number.isFinite(d) || d === 0) {
@@ -61,7 +66,6 @@ export class Fraction {
     const sign = val < 0 ? -1 : 1;
     let x = Math.abs(val);
 
-    // Continuous fraction approximation
     let m00 = 1, m01 = 0, m10 = 0, m11 = 1;
     while (x > 0 && m10 * Math.floor(x) + m11 <= maxDenominator) {
       const a = Math.floor(x);
@@ -73,7 +77,7 @@ export class Fraction {
       m10 = t1;
       if (x === a) break;
       x = 1 / (x - a);
-      if (x > 1e12) break; // Avoid infinite loop on irrational values
+      if (x > 1e12) break;
     }
 
     const num = sign * m00;
@@ -81,52 +85,28 @@ export class Fraction {
     return new Fraction(num, den);
   }
 
+  /* Arithmetic Operations */
   add(other) {
-    const o = other instanceof Fraction ? other : new Fraction(other);
-    const result = new Fraction(this.n * o.d + o.n * this.d, this.d * o.d);
-    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Addition ===', { 
-      a: this.toString(), 
-      b: o.toString(), 
-      result: result.toString() 
-    });
-    return result;
+    const o = other instanceof Fraction ? other : toFraction(other);
+    return new Fraction(this.n * o.d + o.n * this.d, this.d * o.d);
   }
 
   sub(other) {
-    const o = other instanceof Fraction ? other : new Fraction(other);
-    const result = new Fraction(this.n * o.d - o.n * this.d, this.d * o.d);
-    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Subtraction ===', { 
-      a: this.toString(), 
-      b: o.toString(), 
-      result: result.toString() 
-    });
-    return result;
+    const o = other instanceof Fraction ? other : toFraction(other);
+    return new Fraction(this.n * o.d - o.n * this.d, this.d * o.d);
   }
 
   mul(other) {
-    const o = other instanceof Fraction ? other : new Fraction(other);
-    const result = new Fraction(this.n * o.n, this.d * o.d);
-    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Multiplication ===', { 
-      a: this.toString(), 
-      b: o.toString(), 
-      result: result.toString() 
-    });
-    return result;
+    const o = other instanceof Fraction ? other : toFraction(other);
+    return new Fraction(this.n * o.n, this.d * o.d);
   }
 
   div(other) {
-    const o = other instanceof Fraction ? other : new Fraction(other);
+    const o = other instanceof Fraction ? other : toFraction(other);
     if (o.n === 0) {
-      console.error('=== FRACTION ERROR: Division by zero ===', { this: this.toString(), other: o.toString() });
       throw new Error('Division by zero fraction');
     }
-    const result = new Fraction(this.n * o.d, this.d * o.n);
-    if (DEBUG_FRACTIONS) console.log('=== FRACTION DEBUG: Division ===', { 
-      a: this.toString(), 
-      b: o.toString(), 
-      result: result.toString() 
-    });
-    return result;
+    return new Fraction(this.n * o.d, this.d * o.n);
   }
 
   neg() {
@@ -168,6 +148,9 @@ export class Fraction {
   }
 }
 
+/* ============================================================
+   3. Conversion & Display Utilities
+   ============================================================ */
 export function toFraction(val) {
   if (val instanceof Fraction) return val;
   if (typeof val === 'number') return Fraction.fromFloat(val);
@@ -175,8 +158,7 @@ export function toFraction(val) {
 }
 
 /**
- * Formats row operation cleanly (atozmath & emathhelp standard):
- * e.g. "R2(new) = R2(old) - (3) · R1(pivot)" or "R1(new) = (1/2) · R1(old)"
+ * Formats row operation cleanly (e.g. "R2(new) = R2(old) - (3) · R1(pivot)")
  */
 export function formatRowOp(targetRowName, factor, pivotRowName, isNormalize = false) {
   if (isNormalize) {

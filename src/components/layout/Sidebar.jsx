@@ -1,6 +1,14 @@
+/**
+ * Sidebar Navigation Drawer
+ * Off-canvas slide-out drawer providing direct navigation across routes.
+ */
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 
+/* ============================================================
+   Sidebar Component
+   ============================================================ */
 const Sidebar = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 

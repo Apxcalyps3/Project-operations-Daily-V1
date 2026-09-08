@@ -1,14 +1,15 @@
 /**
- * api.js — Storage Service for Operations Daily
+ * Storage Service for Operations Daily
  * Handles solver history, challenge records, and daily challenge models.
  * Supports user-scoped history with Firestore synchronization and guest fallback.
  */
 
-import { db, auth } from './firebase';
+import { db, auth } from './firebase.js';
 import { collection, addDoc, doc, setDoc, getDocs } from 'firebase/firestore';
 
-/* ── Storage Key Helpers ── */
-
+/* ============================================================
+   1. Storage Key Helpers
+   ============================================================ */
 export function getChallengeStorageKey(type = 'LP', uid = null) {
   const activeUid = uid || auth?.currentUser?.uid;
   const t = type.toLowerCase();
@@ -20,8 +21,9 @@ export function getSolveHistoryStorageKey(uid = null) {
   return activeUid ? `op_${activeUid}_solve_history` : `op_guest_solve_history`;
 }
 
-/* ── Solver History ── */
-
+/* ============================================================
+   2. Solver History Service
+   ============================================================ */
 export function getSolveHistory(uid = null) {
   const activeUid = uid || auth?.currentUser?.uid;
   const storageKey = getSolveHistoryStorageKey(activeUid);
@@ -29,7 +31,7 @@ export function getSolveHistory(uid = null) {
   try {
     const raw = localStorage.getItem(storageKey);
     if (!raw) {
-      // If guest, provide default sample records matching PDF Page 9
+      // If guest, provide default sample records
       if (!activeUid) {
         const initial = [
           { id: 1, type: 'IP', timestamp: '09/05/2026 14:30', description: 'SOLVED IP PROBLEM 09/05/2026 14:30', details: {} },
@@ -63,12 +65,12 @@ export function saveSolveRecord(type = 'LP', details = {}, uid = null) {
       type: type.toUpperCase(),
       timestamp: dateStr,
       description: `SOLVED ${type.toUpperCase()} PROBLEM ${dateStr}`,
-      details, // Contains full model snapshot + optimalZ
+      details,
       createdAt: Date.now(),
       userId: activeUid || 'guest'
     };
 
-    const updated = [record, ...history].slice(0, 50); // keep last 50
+    const updated = [record, ...history].slice(0, 50);
     localStorage.setItem(getSolveHistoryStorageKey(activeUid), JSON.stringify(updated));
 
     if (activeUid && db) {
@@ -104,7 +106,6 @@ export async function syncUserSolveHistoryFromFirestore(uid) {
       });
     });
 
-    // Merge remote and local by id or signature
     const seen = new Set();
     const combined = [];
     [...remote, ...local].forEach((item) => {
@@ -126,8 +127,9 @@ export async function syncUserSolveHistoryFromFirestore(uid) {
   }
 }
 
-/* ── Challenge Solve Tracking ── */
-
+/* ============================================================
+   3. Challenge Solve Tracking
+   ============================================================ */
 export function markChallengeAsSolved(type = 'LP', dateKey, modelSnapshot = {}, uid = null) {
   const activeUid = uid || auth?.currentUser?.uid;
   const storageKey = getChallengeStorageKey(type, activeUid);
@@ -204,32 +206,31 @@ export async function syncUserChallengesFromFirestore(uid) {
   }
 }
 
-/* ── Daily Challenge Models ── */
-
-// Simple seeded PRNG
+/* ============================================================
+   4. Daily Challenge Procedural Generation
+   ============================================================ */
 function mulberry32(a) {
   return function() {
-    var t = a += 0x6D2B79F5;
+    let t = a += 0x6D2B79F5;
     t = Math.imul(t ^ t >>> 15, t | 1);
     t ^= t + Math.imul(t ^ t >>> 7, t | 61);
     return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  }
+  };
 }
 
 function generateModel(type, dateStr) {
-  // Use date string as seed
   let seed = 0;
   for (let i = 0; i < dateStr.length; i++) {
     seed += dateStr.charCodeAt(i) * Math.pow(10, i % 3);
   }
   const random = mulberry32(seed + (type === 'IP' ? 100 : 0));
 
-  const numVars = Math.floor(random() * 3) + 2; // 2 to 4
-  const numConstraints = Math.floor(random() * 3) + 2; // 2 to 4
+  const numVars = Math.floor(random() * 3) + 2;
+  const numConstraints = Math.floor(random() * 3) + 2;
   const isMax = random() > 0.5;
 
   const rawObjective = Array.from({ length: numVars }, () => Math.floor(random() * 9) + 1);
-  let objectiveStr = `${isMax ? 'MAXIMIZE' : 'MINIMIZE'} Z = ` + rawObjective.map((c, i) => `${c}X${String.fromCharCode(8321 + i)}`).join(' + ');
+  const objectiveStr = `${isMax ? 'MAXIMIZE' : 'MINIMIZE'} Z = ` + rawObjective.map((c, i) => `${c}X${String.fromCharCode(8321 + i)}`).join(' + ');
 
   const constraints = [];
   const rels = ['<=', '>=', '='];
@@ -247,7 +248,7 @@ function generateModel(type, dateStr) {
     let text = textParts.join(' + ');
     if (!text) text = `0X₁`;
     
-    let relStr = rel === '<=' ? '≤' : (rel === '>=' ? '≥' : '=');
+    const relStr = rel === '<=' ? '≤' : (rel === '>=' ? '≥' : '=');
     text += ` ${relStr} ${rhs}`;
 
     constraints.push({
@@ -272,10 +273,121 @@ function generateModel(type, dateStr) {
   };
 }
 
+export const todayKey = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 export function getDailyLPModel(dateStr) {
   return generateModel('LP', dateStr);
 }
 
 export function getDailyIPModel(dateStr) {
   return generateModel('IP', dateStr);
+}
+
+/* ============================================================
+   5. Current Daily Challenge Guard for Solver
+   Verifies whether a model matches today's active challenge only.
+   ============================================================ */
+const parseNumericVal = (v) => {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'number') return v;
+  const s = String(v).trim();
+  if (s.includes('/')) {
+    const [num, den] = s.split('/').map(Number);
+    if (den && Number.isFinite(num) && Number.isFinite(den)) {
+      return num / den;
+    }
+  }
+  const n = parseFloat(s);
+  return Number.isNaN(n) ? 0 : n;
+};
+
+const normalizeRel = (r) => {
+  if (!r) return '<=';
+  const str = String(r).trim();
+  if (str === '≤' || str === '<=') return '<=';
+  if (str === '≥' || str === '>=') return '>=';
+  return '=';
+};
+
+const getConstraintSignature = (c, numVars) => {
+  const coeffs = [];
+  for (let i = 0; i < numVars; i++) {
+    const val = parseNumericVal(c.coefficients?.[i]);
+    coeffs.push(val.toFixed(4));
+  }
+  const rel = normalizeRel(c.relation);
+  const rhs = parseNumericVal(c.rhs).toFixed(4);
+  return `${coeffs.join(',')}|${rel}|${rhs}`;
+};
+
+const matchesModelDefinition = (input, target) => {
+  if (!input || !target) return false;
+
+  // Check variable count
+  if (Number(input.numVars) !== Number(target.numVars)) return false;
+
+  // Check objective optimization direction (isMax)
+  if (Boolean(input.isMax) !== Boolean(target.isMax)) return false;
+
+  // Check objective coefficients
+  if (!input.objective || input.objective.length !== target.numVars) return false;
+  for (let i = 0; i < target.numVars; i++) {
+    const inVal = parseNumericVal(input.objective[i]);
+    const tgtVal = parseNumericVal(target.rawObjective[i]);
+    if (Math.abs(inVal - tgtVal) > 0.001) return false;
+  }
+
+  // Check constraints count
+  if (!input.constraints || input.constraints.length !== target.constraints.length) {
+    return false;
+  }
+
+  // Order-independent constraint comparison
+  const inputSigs = input.constraints
+    .map((c) => getConstraintSignature(c, target.numVars))
+    .sort();
+  const targetSigs = target.constraints
+    .map((c) => getConstraintSignature(c, target.numVars))
+    .sort();
+
+  for (let i = 0; i < inputSigs.length; i++) {
+    if (inputSigs[i] !== targetSigs[i]) return false;
+  }
+
+  return true;
+};
+
+/**
+ * Checks if the given model matches the CURRENT day's active daily challenge.
+ * Strictly limited to todayKey(); past daily challenges return isMatch: false.
+ */
+export function checkCurrentDailyChallenge(solverType, inputModel) {
+  const activeDateKey = todayKey();
+
+  // Test against today's LP challenge
+  const dailyLP = getDailyLPModel(activeDateKey);
+  if (matchesModelDefinition(inputModel, dailyLP)) {
+    return {
+      isMatch: true,
+      challengeType: 'LP',
+      title: 'DAILY LP CHALLENGE',
+      dateKey: activeDateKey,
+    };
+  }
+
+  // Test against today's IP challenge
+  const dailyIP = getDailyIPModel(activeDateKey);
+  if (matchesModelDefinition(inputModel, dailyIP)) {
+    return {
+      isMatch: true,
+      challengeType: 'IP',
+      title: 'DAILY IP CHALLENGE',
+      dateKey: activeDateKey,
+    };
+  }
+
+  return { isMatch: false };
 }

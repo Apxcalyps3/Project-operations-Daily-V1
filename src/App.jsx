@@ -1,3 +1,7 @@
+/**
+ * Operations Daily — Application Shell & Router
+ */
+
 import React from 'react';
 import { HashRouter as Router, Routes, Route, Navigate, Link, useLocation } from 'react-router-dom';
 
@@ -14,18 +18,20 @@ import RetroGrid from './components/layout/RetroGrid';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
 
+/* ============================================================
+   Application Shell Layout
+   ============================================================ */
 function AppContent() {
   const location = useLocation();
   const isHomePage = location.pathname === '/';
 
   return (
     <>
-      {/* Persistent Retro 3D Perspective Grid Background (unchanging across all pages) */}
+      {/* 3D Perspective Grid Background */}
       <RetroGrid />
 
-      {/* Centered Application Shell */}
+      {/* Main Page Container */}
       <div className="page-shell">
-        {/* Header: Logo as clickable Home link */}
         <header className="app-header" style={{ flexDirection: 'column' }}>
           <Link to="/" className="logo-link" title="Return to Home">
             <img
@@ -34,7 +40,6 @@ function AppContent() {
               className="logo-image"
             />
           </Link>
-          {/* Description & version*/}
           {isHomePage && (
             <>
               <p
@@ -61,13 +66,13 @@ function AppContent() {
                   textAlign: 'center',
                 }}
               >
-                v1.0.2
+                v1.0.3
               </span>
             </>
           )}
         </header>
 
-        {/* Routes — following Page 18 Flowchart */}
+        {/* Application Navigation Routes */}
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/solver" element={<SolverPage />} />
@@ -83,6 +88,9 @@ function AppContent() {
   );
 }
 
+/* ============================================================
+   Root Component with Context Providers
+   ============================================================ */
 function App() {
   return (
     <ThemeProvider>

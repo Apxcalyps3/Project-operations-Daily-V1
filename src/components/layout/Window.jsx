@@ -1,9 +1,13 @@
+/**
+ * Window Card Component
+ * Interactive retro window container for icon menu selections.
+ */
+
 import React from 'react';
 
-/**
- * Window component that displays the official high-resolution PNG icon assets
- * with cyber green glow, hover lift, and click feedback.
- */
+/* ============================================================
+   Window Component
+   ============================================================ */
 const Window = ({ iconSrc, onClick, altText = 'Window Icon', className = '' }) => {
   return (
     <div
